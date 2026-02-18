@@ -6,7 +6,7 @@
 
 ## デモ動画
 ▶ デモプレイ動画はこちら
-[[https://drive.google.com/file/d/15H8YpE6kNC4YBd7l5YWjQPAw3xUBJYJO/view?usp=drive_link](https://drive.google.com/file/d/1JVbs8yUc8Ffw8tDpU5Mo2gNrURcGEoLX/view?usp=drive_link)](https://drive.google.com/file/d/1Nqw89RCjxZnexIcCzUpJpZ8CLIdzIbw2/view?usp=drive_link)
+https://drive.google.com/file/d/1Nqw89RCjxZnexIcCzUpJpZ8CLIdzIbw2/view?usp=drive_link
 ---
 
 ## 制作情報
