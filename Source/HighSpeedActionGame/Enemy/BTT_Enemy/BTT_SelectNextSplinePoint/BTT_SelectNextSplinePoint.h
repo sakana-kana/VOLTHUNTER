@@ -24,9 +24,9 @@ class HIGHSPEEDACTIONGAME_API UBTT_SelectNextSplinePoint : public UBTTaskNode
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 
-	FBlackboardKeySelector PatrolLocationKey;
+	FBlackboardKeySelector PatrolLocationKey;//パトロール座標
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector PatrolIndexKey;
+	FBlackboardKeySelector PatrolIndexKey;//パトロール指数
 
 };

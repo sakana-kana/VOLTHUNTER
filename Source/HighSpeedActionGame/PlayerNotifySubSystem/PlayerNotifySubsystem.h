@@ -10,6 +10,7 @@
 
 // BPでイベントを受け取るためのデリゲート定義
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJustEvasiveDelegate, const AActor*, Attacker);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDyingDelegate_Sub, AActor*, DyingActor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDiedDelegate_Sub, AActor*, DeadActor);
 /**
  * 
@@ -24,6 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerNotify")
 	void NotifyJustEvasive(const AActor* Attacker);
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerNotify")
+	void NotifyPlayerDying(AActor* DyingActor);
+
 	// 死亡を通知
 	UFUNCTION(BlueprintCallable, Category = "PlayerNotify")
 	void NotifyPlayerDied(AActor* DeadActor);
@@ -32,6 +36,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "PlayerNotify|Event")
 	FOnJustEvasiveDelegate OnJustEvasiveOccurred;
+
+	UPROPERTY(BlueprintAssignable, Category = "PlayerNotify|Event")
+	FOnPlayerDyingDelegate_Sub OnPlayerDyingOccurred;
 
 	UPROPERTY(BlueprintAssignable, Category = "PlayerNotify|Event")
 	FOnPlayerDiedDelegate_Sub OnPlayerDiedOccurred;

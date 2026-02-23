@@ -13,6 +13,7 @@ class APlayerCharacter;
 class AResultPlayerController;
 class UMediaPlayer;
 class UMediaSource;
+class ALevelSequenceActor;
 /**
  *
  */
@@ -36,6 +37,9 @@ public:
 
 	UFUNCTION()
 	void OnGameClear();
+
+	UFUNCTION()
+	void PlayBossSequenceIfAvailable();
 
 protected:
 	//スタート時、生成時
@@ -65,6 +69,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Media")
 	TObjectPtr<UMediaSource> m_MediaSource;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BGM")
 	UGameBGMComponent* BGMManager;

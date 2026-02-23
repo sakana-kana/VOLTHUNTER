@@ -25,8 +25,11 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	//Õ“Ë”»’è¶¬
 	TObjectPtr<AAttackCollisionDetection> CreateAAttackCollisionDetection(UWorld* World, const FVector& Location, const FRotator& Rotation)const;
 
+	//¶¬‚·‚éÕ“Ë”»’èƒNƒ‰ƒX
 	UPROPERTY(EditAnywhere, Category = "AttackCollisionDetection")
 	TSubclassOf<AAttackCollisionDetection> AttackCollisionClass;
 

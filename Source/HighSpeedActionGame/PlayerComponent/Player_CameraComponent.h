@@ -9,6 +9,7 @@
 //#include "CameraComponent/LockOn/CameraLockOnHandler.h"
 #include "CameraComponent/CameraAction/CameraActionHandler.h"
 #include "CameraComponent/CameraBoss/CameraBossHandler.h"
+#include "CameraComponent/CameraDie/CameraDieHandler.h"
 #include "Components/ActorComponent.h"
 #include "../PlayerParam.h"
 #include "CameraComponent/ClearCamera/ClearCameraParam/ClearCameraPhaseParam.h"
@@ -127,6 +128,7 @@ public:
 	void ClearCamera();
 
 	//カメラリセット
+	UFUNCTION(BlueprintCallable, Category = "Reset")
 	void ResetCamera();
 
 private:
@@ -149,6 +151,9 @@ public:
 
 	// カメラの横位置
 	void SetCameraSideOffset(bool bIsSideView, float OffsetAmount = 150.f);
+
+	//死亡時
+	void OnPlayerDie();
 private:
 	//曲線補間
 	FVector SmoothDamp(FVector Current, FVector Target, FVector& Velocity, float SmoothTime, float DeltaTime);
@@ -198,6 +203,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, Category = "Boss Camera")
 	UCameraBossHandler* BossHandler;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, Category = "Die Camera")
+	UCameraDieHandler* DieHandler;
+
 private:
 	// 演出管理クラスのインスタンス
 	UPROPERTY()
@@ -210,6 +219,8 @@ private:
 	// ハンドラ定義
 	UPROPERTY()
 	UCameraActionHandler* ActionHandler;
+
+
 private:
 	//カメラ設定
 //スプリングアーム

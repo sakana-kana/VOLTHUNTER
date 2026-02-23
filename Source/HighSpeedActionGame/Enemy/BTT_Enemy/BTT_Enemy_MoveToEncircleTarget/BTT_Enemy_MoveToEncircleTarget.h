@@ -31,9 +31,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float m_PlayerProximityRadius = 100.f;
 private:
+	//移動終了
 	void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result);
 
+	//デリゲードバインド関数
 	void BindDelegate(AAIController* AIController);
+
 	// デリゲートアンバインド関数
 	void UnBindDelegate(AAIController* AIController);
 

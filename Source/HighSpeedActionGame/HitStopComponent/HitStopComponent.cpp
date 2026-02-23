@@ -1,4 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//ヒットストップコンポーネント
+//佐々木奏太担当箇所
 
 
 #include "HitStopComponent.h"
@@ -72,3 +73,4 @@ void UHitStopComponent::EndHitStop() {
 		GetWorld()->GetTimerManager().ClearTimer(m_HitStopTimerHandle);
 	}
 }
+

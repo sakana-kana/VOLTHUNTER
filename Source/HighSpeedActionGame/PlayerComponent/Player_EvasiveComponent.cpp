@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Player_ElectroGaugeComponent.h"
 #include "Player_SkillComponent.h"
+#include "../HitStopComponent/HitStopComponent.h"
 #include "../PlayerCharacter.h"
 #include "../PlayerNotifySubSystem/PlayerNotifySubsystem.h"
 #include "../CollisionChannelName.h"
@@ -326,6 +327,11 @@ void UPlayer_EvasiveComponent::OnJustEvasiveOverlap(UPrimitiveComponent* Overlap
 	if (m_IsJustEvasive)return;
 	if (m_Player->GetIsDamage())return;
 
+	if (UHitStopComponent* HitStopComp = m_Player->FindComponentByClass<UHitStopComponent>())
+	{
+		if (HitStopComp->IsHitStopActive())return;
+	}
+
 	//攻撃コリジョンと重なったか？
 	if (OtherComp && OtherComp->GetCollisionObjectType() == AttackDetection_Collision)
 	{
@@ -338,17 +344,17 @@ void UPlayer_EvasiveComponent::OnJustEvasiveOverlap(UPrimitiveComponent* Overlap
 
 		if (JustEvasiveWidgetClass && m_Player->GetController())
 		{
-			// 既に表示されていたら一旦消す（連打対策）
+			//既に表示されていたら一旦消す
 			if (m_JustEvasiveWidgetInstance)
 			{
 				m_JustEvasiveWidgetInstance->RemoveFromParent();
 				m_JustEvasiveWidgetInstance = nullptr;
 			}
 
-			// APlayerControllerを取得
+			//APlayerControllerを取得
 			if (APlayerController* PC = Cast<APlayerController>(m_Player->GetController()))
 			{
-				// Widget生成
+				//Widget生成
 				m_JustEvasiveWidgetInstance = CreateWidget<UUserWidget>(PC, JustEvasiveWidgetClass);
 				if (m_JustEvasiveWidgetInstance)
 				{
@@ -358,7 +364,7 @@ void UPlayer_EvasiveComponent::OnJustEvasiveOverlap(UPrimitiveComponent* Overlap
 			}
 		}
 
-		// スロー演出開始時に監視タイマーをリセットしておく
+		//スロー演出開始時に監視タイマーをリセットしておく
 		m_CurrentSlowMotionWatchTime = 0.f;
 
 		//スロー演出

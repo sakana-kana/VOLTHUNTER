@@ -33,7 +33,7 @@ UPlayer_CameraComponent::UPlayer_CameraComponent()
 	, m_HeavyChargeArmLength(250.f)
 	, m_HeavyChargeInterpSpeed(6.f)
 	, m_SkillZoomInArmLength(200.f)
-	, m_SkillZoomOutArmLength(1000.f)
+	, m_SkillZoomOutArmLength(800.f)
 	, m_SkillZoomInSpeed(10.f)
 	, m_SkillZoomOutSpeed(6.f)
 	, m_IsClearCamera(false)
@@ -100,6 +100,12 @@ void UPlayer_CameraComponent::BeginPlay()
 	}
 	m_IsOpeningCamera = false;
 
+	if (DieHandler)
+	{
+		DieHandler->Initialize(m_SpringArm,m_PlayerController.Get());
+	}
+
+
 	//LockOnHandler = NewObject<UCameraLockOnHandler>(this);
 	//if (LockOnHandler) {
 
@@ -145,6 +151,12 @@ void UPlayer_CameraComponent::BeginPlay()
 // Called every frame
 void UPlayer_CameraComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+	if (DieHandler && DieHandler->IsActive())
+	{
+		return;
+	}
+
+
 	//ƒNƒŠƒA‚Í‘¼‚ğ“®‚©‚³‚È‚¢
 	if (m_IsClearCamera)
 	{
@@ -182,6 +194,7 @@ void UPlayer_CameraComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		}
 		return;
 	}
+
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// “G•ûŒü•â³‚È‚Ç‚Íc‚µ‚Ä‚àOK
@@ -697,6 +710,14 @@ void UPlayer_CameraComponent::SetCameraSideOffset(bool bIsSideView, float Offset
 	}
 }
 
+void UPlayer_CameraComponent::OnPlayerDie()
+{
+	if (DieHandler)
+	{
+		DieHandler->StartDieCamera();
+	}
+}
+
 FVector UPlayer_CameraComponent::SmoothDamp(FVector Current, FVector Target, FVector& Velocity, float SmoothTime, float DeltaTime)
 {
 	//ŠpU“®”,‚Î‚Ë‚Ì‹­‚³
@@ -754,6 +775,11 @@ void UPlayer_CameraComponent::ResetCamera()
 	m_IsClearCamera = false;
 	m_ClearCameraPhase = EClearCameraPhase::None;
 
+	if (DieHandler)
+	{
+		DieHandler->EndDieCamera();
+	}
+
 	// ===== ‘¼ƒJƒƒ‰ó‘Ô‚ğ‘S’â~ =====
 	m_IsEnemyDirectionLooking = false;
 	m_EnemyTarget = nullptr;
@@ -768,6 +794,10 @@ void UPlayer_CameraComponent::ResetCamera()
 		m_SpringArm->bUsePawnControlRotation = true;
 		m_SpringArm->TargetArmLength = PlayerParam.CameraLength;
 		m_SpringArm->SocketOffset = PlayerParam.CameraSocketOffset;
+
+		m_SpringArm->bInheritPitch = true;
+		m_SpringArm->bInheritYaw   = true;
+		m_SpringArm->bInheritRoll  = true;
 	}
 
 	// ===== ControlRotation ‚ğ Actor Šî€‚ÉÄ“¯Šú =====

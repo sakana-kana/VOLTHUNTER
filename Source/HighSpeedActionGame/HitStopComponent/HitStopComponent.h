@@ -26,6 +26,8 @@ public:
     // ヒットストップが現在アクティブかどうかを取得
     UFUNCTION(BlueprintCallable, Category = "HitStop")
     bool IsHitStopActive() const;
+
+
 private:
     // ヒットストップ終了処理
     void EndHitStop();
@@ -55,6 +57,4 @@ private:
 
     //タイマー使用中かのstaticメンバー変数追加//同じフレームで衝突した場合IsTimerActiveだと上手く動作しなかったため
     static bool m_IsUseHitStop;
-
-
 };

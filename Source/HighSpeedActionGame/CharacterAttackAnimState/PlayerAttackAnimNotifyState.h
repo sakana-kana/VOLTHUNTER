@@ -15,6 +15,4 @@ class HIGHSPEEDACTIONGAME_API UPlayerAttackAnimNotifyState : public UCharacterAt
 	GENERATED_BODY()
 
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference) override;
-
-	
 };

@@ -23,6 +23,7 @@ class HIGHSPEEDACTIONGAME_API UBTT_ActivateAttackAbility : public UBTTaskNode
 public:
     UBTT_ActivateAttackAbility();
 
+    //攻撃アビリティ
     UPROPERTY(EditAnywhere, Category = "Ability")
     TSubclassOf<UGameplayAbility> AttackAbility;
 
@@ -31,11 +32,9 @@ protected:
     virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 
 private:
-
-
+    //アビリティ終了時に呼ばれるメソッド
     UFUNCTION()
     void OnAbilityEnded(const FAbilityEndedData& AbilityEndedData);
-
 
     UPROPERTY()
     UAbilitySystemComponent* CachedASC;
@@ -49,5 +48,4 @@ private:
     //デリゲードハンドル
     FDelegateHandle AbilityEndedDelegateHandle;
 
-	
 };

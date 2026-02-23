@@ -81,9 +81,9 @@ void AAttackCollisionDetection::Tick(float DeltaTime)
 	float SphereRadius = m_HitSphere->GetUnscaledSphereRadius();
 
 	//半径50cmが基本サイズ
-	float BaseRadius = 50.0f;
+	constexpr float BASE_RADIUS = 50.0f;
 
-	float Scale = SphereRadius / BaseRadius;
+	float Scale = SphereRadius / BASE_RADIUS;
 
 	m_VisualMesh->SetRelativeScale3D(FVector(Scale));
 
@@ -126,9 +126,6 @@ void AAttackCollisionDetection::SetDamage(const float _damage) {
 	m_Damage = _damage;
 }
 
-void AAttackCollisionDetection::SetCauseDamageActor(AActor* _actor) {
-	m_CauseDamageActor = _actor;
-}
 void AAttackCollisionDetection::SetDamageInfo(const FDamageInfo& _damageInfo) {
 	m_DamageInfo = _damageInfo;
 }

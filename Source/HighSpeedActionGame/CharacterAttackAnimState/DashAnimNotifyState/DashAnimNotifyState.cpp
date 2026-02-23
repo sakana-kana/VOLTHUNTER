@@ -9,49 +9,106 @@
 #include "Engine/EngineTypes.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/StaticMeshActor.h"
+#include "../../PlayerNotifySubSystem/PlayerNotifySubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 void UDashAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) {
-	if (!MeshComp)return;
+	if (!MeshComp) return;
 
 	ACharacter* Character = Cast<ACharacter>(MeshComp->GetOwner());
+	if (!Character) return;
 
-	if (Character) {
-		CachedCharacter = Character;
-		m_StartLocation = Character->GetActorLocation();
-		m_HasStopped = false;
+	CachedCharacter = Character;
 
+	UCapsuleComponent* Capsule = CachedCharacter->GetCapsuleComponent();
 
-		m_SpeedBeforeSprint = Character->GetCharacterMovement()->MaxWalkSpeed;
-		Character->GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
-		//プレイヤーに引っかからないようにするために
-		UCapsuleComponent* Capsule = CachedCharacter->GetCapsuleComponent();
+	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	Capsule->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 
-		Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-		Capsule->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
+	m_HasStopped = false;
+	m_IsJustEvasion = false;
+	m_StopTimer = 0.f;
 
-		CachedCharacter->GetCharacterMovement()->bUseRVOAvoidance = false;
-	}
+	// 元の速度保存
+	m_OriginalVelocity = Character->GetCharacterMovement()->Velocity;
 
+	// 移動モードをWalking固定
+	Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	UWorld* World = Character->GetWorld();
+	if (!World)return;
+
+	ACharacter* PlayerCharacter = Cast<ACharacter>(UGameplayStatics::GetPlayerCharacter(World, 0));
+
+	APlayerController* PC = Cast<APlayerController>(PlayerCharacter->GetController());
+	if (!PC) return;
+
+	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
+	if (!LocalPlayer) return;
+
+	UPlayerNotifySubsystem* CachedNotifySubsystem = LocalPlayer->GetSubsystem<UPlayerNotifySubsystem>();
+	if (!CachedNotifySubsystem) return;
+
+	//不都合起きないように一回外して置く（Endが呼ばれない時もあったため）
+	CachedNotifySubsystem->OnJustEvasiveOccurred.RemoveDynamic(this, &UDashAnimNotifyState::OnJustEvasiveOccurred);
+	CachedNotifySubsystem->OnJustEvasiveOccurred.AddDynamic(this, &UDashAnimNotifyState::OnJustEvasiveOccurred);
 }
 void UDashAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float DeltaTime) {
-	if (!CachedCharacter.IsValid())return;
-	if (m_HasStopped)return;
 
-	if (m_EnableWallCheck) {
-		if (IsWallInFront()) {
-			ResetParam();
+	if (!CachedCharacter.IsValid()) return;
+	if (m_HasStopped) return;
+
+	if (m_IsJustEvasion) {
+		m_StopTimer += DeltaTime;
+		if (m_StopTimer > m_StopTime) {
 			m_HasStopped = true;
-			return;
 		}
 	}
 
+	//壁が前にあるなら停止
+	if (IsWallInFront())
+	{
+		CachedCharacter->GetCharacterMovement()->StopMovementImmediately();
+		m_HasStopped = true;
+		return;
+	}
+
 	FVector Forward = CachedCharacter->GetActorForwardVector();
-	CachedCharacter->AddMovementInput(Forward, 1.f);
-}
-void UDashAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) {
-	ResetParam();
+	FVector MoveDelta = Forward * DashSpeed * DeltaTime;
+
+	CachedCharacter->AddActorWorldOffset(MoveDelta, false);
 }
 
+void UDashAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) {
+	if (!CachedCharacter.IsValid()) return;
+
+	UCharacterMovementComponent* MoveComp = CachedCharacter->GetCharacterMovement();
+
+	MoveComp->Velocity = m_OriginalVelocity;
+
+	UCapsuleComponent* Capsule = CachedCharacter->GetCapsuleComponent();
+
+	Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	Capsule->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+
+	UWorld* World = GetWorld();
+
+	if (!World)return;
+
+	ACharacter* PlayerCharacter = Cast<ACharacter>(UGameplayStatics::GetPlayerCharacter(World, 0));
+
+	APlayerController* PC = Cast<APlayerController>(PlayerCharacter->GetController());
+	if (!PC) return;
+
+	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
+	if (!LocalPlayer) return;
+
+	UPlayerNotifySubsystem* CachedNotifySubsystem = LocalPlayer->GetSubsystem<UPlayerNotifySubsystem>();
+
+	if (!CachedNotifySubsystem)return;
+
+	CachedNotifySubsystem->OnJustEvasiveOccurred.RemoveDynamic(this, &UDashAnimNotifyState::OnJustEvasiveOccurred);
+}
 
 bool UDashAnimNotifyState::IsWallInFront()const {
 	if (!CachedCharacter.IsValid())
@@ -78,17 +135,17 @@ bool UDashAnimNotifyState::IsWallInFront()const {
 		{
 			AActor* HitActor = HitResult.GetActor();
 
-			if (HitActor)
+
+			if (!HitActor)return false;
+
+			// EnemyまたはPlayerタグが付いていたら壁判定を無視（falseを返す）
+			if (HitActor->ActorHasTag(FName("Enemy")) || HitActor->ActorHasTag(FName("Player")))
 			{
-				// EnemyまたはPlayerタグが付いていたら壁判定を無視（falseを返す）
-				if (HitActor->ActorHasTag(FName("Enemy")) || HitActor->ActorHasTag(FName("Player")))
-				{
-					return false;
-				}
+				return false;
 			}
 
-			// それ以外はStaticMeshActorであれば壁判定true
-			if (HitActor && HitActor->IsA<AStaticMeshActor>())
+			// 壁のタグがついてるまたはStaticMeshActorであれば壁判定true
+			if (HitActor->ActorHasTag(FName("Wall")) || HitActor->IsA<AStaticMeshActor>())
 			{
 				return true;
 			}
@@ -109,4 +166,10 @@ void UDashAnimNotifyState::ResetParam() {
 	CachedCharacter->GetCharacterMovement()->MaxWalkSpeed = m_SpeedBeforeSprint;
 	m_SpeedBeforeSprint = 0.f;
 	CachedCharacter = nullptr;
+}
+
+void UDashAnimNotifyState::OnJustEvasiveOccurred(const AActor* Attacker) {
+	if (!CachedCharacter.IsValid())	return;
+
+	m_IsJustEvasion = true;
 }

@@ -136,6 +136,7 @@ void UEnemyManager::ActivateEnemy(const FString _name, const FVector _location, 
 
 	if (_enemyFlags.bIsBoss) {
 		NewEnemy->SetIsBoss(true);
+		NewEnemy->HandleBossCase();
 	}
 
 	m_ActiveEnemies.Add(NewEnemy);
@@ -164,6 +165,8 @@ void UEnemyManager::ActivateEnemy(const EnemyType _type, const FVector _location
 
 	if (_enemyFlags.bIsBoss) {
 		NewEnemy->SetIsBoss(true);
+		NewEnemy->HandleBossCase();
+		NewEnemy->SetActorLocation(_location);
 	}
 
 	m_ActiveEnemies.Add(NewEnemy);

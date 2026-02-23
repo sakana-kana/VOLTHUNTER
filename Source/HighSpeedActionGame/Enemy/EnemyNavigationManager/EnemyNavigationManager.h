@@ -19,7 +19,6 @@ class HIGHSPEEDACTIONGAME_API UEnemyNavigationManager : public UTickableWorldSub
 public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
-
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	virtual void Tick(float DeltaTime) override;

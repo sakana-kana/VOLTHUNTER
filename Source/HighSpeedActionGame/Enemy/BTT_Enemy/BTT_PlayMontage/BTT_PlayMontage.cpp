@@ -12,7 +12,7 @@
 UBTT_PlayMontage::UBTT_PlayMontage()
 {
 	NodeName = TEXT("Play Montage And Wait");
-	bNotifyTick = false; // Tick不要
+	bNotifyTick = true;
 	bCreateNodeInstance = true;
 }
 
@@ -20,39 +20,71 @@ EBTNodeResult::Type UBTT_PlayMontage::ExecuteTask(UBehaviorTreeComponent& OwnerC
 {
 	APawn* Pawn = OwnerComp.GetAIOwner() ? OwnerComp.GetAIOwner()->GetPawn() : nullptr;
 	ACharacter* Character = Pawn ? Cast<ACharacter>(Pawn) : nullptr;
-	if (!Character)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Owner is not a Character"));
-		return EBTNodeResult::Failed;
-	}
 
-	if (!MontageToPlay)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("MontageToPlay is null"));
+	if (!Character || !MontageToPlay)
 		return EBTNodeResult::Failed;
-	}
 
-	UAnimInstance* AnimInstance = Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr;
-	if (!AnimInstance)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AnimInstance is null"));
-		return EBTNodeResult::Failed;
-	}
-
-	FOnMontageEnded MontageEndedDelegate;
-	MontageEndedDelegate.BindUObject(this, &UBTT_PlayMontage::OnMontageEnded, &OwnerComp);
+	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)return EBTNodeResult::Failed;
 
 	AnimInstance->Montage_Play(MontageToPlay);
 
-	AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
+	return EBTNodeResult::InProgress;
+}
 
-	return EBTNodeResult::InProgress; // 完了までタスク継続
+void UBTT_PlayMontage::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) {
+	APawn* Pawn = OwnerComp.GetAIOwner() ? OwnerComp.GetAIOwner()->GetPawn() : nullptr;
+	ACharacter* Character = Pawn ? Cast<ACharacter>(Pawn) : nullptr;
+
+	if (!Character)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+
+	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+
+	// 再生していなければ終了
+	if (!AnimInstance->Montage_IsPlaying(MontageToPlay))
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+	}
+
 }
 
 void UBTT_PlayMontage::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp)
 {
-	if (OwnerComp)
+	if (!OwnerComp)
+		return;
+
+	if (bInterrupted)
 	{
+		// 途中停止なら失敗扱い（ここが重要）
+		FinishLatentTask(*OwnerComp, EBTNodeResult::Failed);
+	}
+	else
+	{
+		// 正常終了
 		FinishLatentTask(*OwnerComp, EBTNodeResult::Succeeded);
 	}
+
+	// Delegate解除
+	APawn* Pawn = OwnerComp->GetAIOwner() ? OwnerComp->GetAIOwner()->GetPawn() : nullptr;
+	ACharacter* Character = Pawn ? Cast<ACharacter>(Pawn) : nullptr;
+	if (Character)
+	{
+		UAnimInstance* AnimInstance = Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr;
+		if (AnimInstance)
+		{
+			AnimInstance->OnMontageEnded.RemoveAll(this);
+		}
+	}
+
+	m_DelegateBound = false;
 }
+

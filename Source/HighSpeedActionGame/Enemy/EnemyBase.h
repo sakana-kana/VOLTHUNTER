@@ -59,76 +59,77 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	//アクティブをセット//・描画・衝突・Tick
+	//セッター
 	virtual void SetActive(const bool _isActive);
 	void SetAIControllerActive(const bool _isActive);
 	virtual void SetAIControllerIsActive(const bool _isActive);
-
-	void SetEnemyActiveMoveComponent(const bool _isActive);
-	bool GetIsActive()const;
-
-	void SetEnemyParam(FEnemyDataBase EnemyData);
-	FEnemyParam GetEnemyParam()const { return m_EnemyParam; }
-
-	ASplinePatrolActor* GetSplinePatrolActor()const { return m_SplinePatrolActor; }
-
 	void SetCanSeeTarget(const bool _canSee) { m_CanSeeTarget = _canSee; }
-
-
-	virtual void TakeDamage(const FDamageInfo& _damageInfo)override;
-
-	//アビリティシステム
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
-	void SetMoveTargetLocation(const FVector& _location) { m_MoveTargetLocation = _location; }
-	FVector GetMoveTargetLocation()const { return m_MoveTargetLocation; }
-
-	void SetBBMoveToLocation(const FVector _moveToLocation, FName _keyName);
-
-	float const GetDistanceToTarget()const { return m_DistanceToTarget; }
-
-	void Speed​​ChangeDash();
-	void SpeedChangeWalk();
-
-	virtual void OnAttackEnd();
-	virtual void OnDamageEnd();
-	virtual void OnDying();
-	virtual void OnDeath();
-
-
-	void BlowEnemy(const FVector& _blowVector, const float _blowScale);
 	void SetIsEventEnemy(const bool _isEventEnemy);
-	bool GetIsEventEnemy() { return m_EnemyTypeFlags.bIsEventEnemy; }
-	bool GetIsBossEnemy() { return m_EnemyTypeFlags.bIsBoss; }
-
-	void ResetEnemyTypeFlags();
-
-	virtual void OnEnterEventMode();
-
-	float CalculateEnemyDamage(const FDamageInfo& _damage);
-
-	uint8 GetBBCurrentState(const FName _keyName = "EnemyState");
-	bool GetBoolBBIsTakingDamage()const;
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy")
-	bool GetIsDeath()const;
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy")
-	bool GetIsDying()const;//やられたかどうか
-
+	void SetMoveTargetLocation(const FVector& _location) { m_MoveTargetLocation = _location; }
+	void SetBBMoveToLocation(const FVector _moveToLocation, FName _keyName);
+	void SetEnemyActiveMoveComponent(const bool _isActive);
+	void SetEnemyParam(FEnemyDataBase EnemyData);
 	void SetIsBoss(const bool _isBoss) { m_EnemyTypeFlags.bIsBoss = _isBoss; }
 
+	//ゲッター
+	bool GetIsActive()const { return m_IsActive; }
+	FEnemyParam GetEnemyParam()const { return m_EnemyParam; }
+	ASplinePatrolActor* GetSplinePatrolActor()const { return m_SplinePatrolActor; }
+	FVector GetMoveTargetLocation()const { return m_MoveTargetLocation; }
+	float const GetDistanceToTarget()const { return m_DistanceToTarget; }
+	bool GetIsEventEnemy() { return m_EnemyTypeFlags.bIsEventEnemy; }
+	bool GetIsBossEnemy() { return m_EnemyTypeFlags.bIsBoss; }
+	uint8 GetBBCurrentState(const FName _keyName = "EnemyState");
+	bool GetBoolBBIsTakingDamage()const;								
+	float GetWarpOffsetDistance()const { return m_WarpOffsetDistance; }	
+
+	//死亡したか
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	bool GetIsDeath()const { return m_IsDeath; }
+
+	//やられたかどうか
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	bool GetIsDying()const { return m_IsDying; }
+
+	//ダメージインターフェース
+	virtual void TakeDamage(const FDamageInfo& _damageInfo)override;
+
+	//吹っ飛ばし処理
+	void BlowEnemy(const FVector& _blowVector, const float _blowScale);
+
+	void Speed​​ChangeDash();//ダッシュに変更時
+	void SpeedChangeWalk();//歩きに変更時
+
+	virtual void OnDamageEnd();//ダメージ終了時
+	virtual void OnDying();//やられ終了時
+	virtual void OnDeath();//死亡終了時
+
+	//敵フラグリセット
+	void ResetEnemyTypeFlags();
+
+	//イベントモードに入るときのメソッド
+	virtual void OnEnterEventMode();
+
+	//ダメージ計算
+	float CalculateEnemyDamage(const FDamageInfo& _damage);
+
+	//ボス敵の場合召喚時に呼ばれるメソッド
+	virtual void HandleBossCase();
+
+	//ボスシーケンス終了メソッド
+	UFUNCTION()
+	void OnBossSequenceFinished();
+
+	//敵ポーズ
 	UFUNCTION(BlueprintCallable, Category = "Enemy")
 	void PauseEnemy(bool _isPouse);
 
-	float GetWarpOffsetDistance()const { return m_WarpOffsetDistance; }
 protected:
-
+	//オパシティセット
 	void SetOpacity(const float alpha);
 
+	//パラメーターリセット
 	virtual void ResetParam();
 
 	//ダメージ情報使用
@@ -137,18 +138,15 @@ protected:
 	//プレイヤーの方向を瞬時に向く
 	void FacePlayerDirection();
 
+	//BBのダメージセット
 	void SetBBIsTakingDamage(const bool _isTakingDamage);
 
 	//ダメージ時のAI周りのセットアップ
 	void HandleDamageTakenAI();
 
+	//ターゲット視認時
 	void OnSeeTarget();
-public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
-	UAbilitySystemComponent* m_AbilitySystemComponent;
-
 protected:
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
 	FEnemyParam m_EnemyParam;//敵の基本パラメーター

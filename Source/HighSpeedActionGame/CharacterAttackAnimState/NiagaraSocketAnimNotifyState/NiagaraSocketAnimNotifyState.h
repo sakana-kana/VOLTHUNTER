@@ -18,6 +18,9 @@ class HIGHSPEEDACTIONGAME_API UNiagaraSocketAnimNotifyState : public UAnimNotify
 {
 	GENERATED_BODY()
 public:
+    virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
+    virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
+
     // Niagaraエフェクトアセット
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     UNiagaraSystem* NiagaraSystem;
@@ -26,17 +29,13 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     FName SocketName = NAME_None;
 
-    // オフセット位置（任意）
+    // オフセット位置
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     FVector LocationOffset = FVector::ZeroVector;
 
-    // オフセット回転（任意）
+    // オフセット回転
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
     FRotator RotationOffset = FRotator::ZeroRotator;
-
-    virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
-    virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
-
 private:
     UPROPERTY(Transient)
     UNiagaraComponent* SpawnedNiagaraComponent = nullptr;

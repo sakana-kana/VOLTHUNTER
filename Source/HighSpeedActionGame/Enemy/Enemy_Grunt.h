@@ -32,7 +32,4 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Grunt")
 	float m_Timer;//汎用タイマー
-
-
-
 };

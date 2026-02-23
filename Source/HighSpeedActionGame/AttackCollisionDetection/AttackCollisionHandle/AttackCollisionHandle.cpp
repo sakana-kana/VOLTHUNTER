@@ -2,13 +2,11 @@
 #include "../AttackCollisionPoolSubsystem/AttackCollisionPoolSubsystem.h"
 #include "../AttackCollisionDetection.h"
 
-FAttackCollisionHandle::FAttackCollisionHandle(
-	UAttackCollisionPoolSubsystem* InSubsystem,
-	AAttackCollisionDetection* InInstance
-)
+FAttackCollisionHandle::FAttackCollisionHandle(UAttackCollisionPoolSubsystem* InSubsystem,AAttackCollisionDetection* InInstance)
 	: m_AttackCollisionPoolSubsystem(InSubsystem)
 	, m_AttackCollisionDetectionInstance(InInstance)
 {
+
 }
 
 

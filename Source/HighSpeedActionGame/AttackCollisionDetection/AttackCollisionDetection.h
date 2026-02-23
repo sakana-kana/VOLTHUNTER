@@ -35,51 +35,45 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 
-	void SetActive(const bool _isActive);
-	bool GetIsActive()const;
+	void SetActive(const bool _isActive);//アクティブセット
+	bool GetIsActive()const;//アクティブかどうか
+	void SetHitActorTags(const TArray<FString> _tags);//タグセット
+	void SetRadius(const float _radius);//半径セット
+	void SetLocation(const FVector& Location);//座標セット
+	void SetDamage(const float _damage);//ダメージセット
 
-	void SetHitActorTags(const TArray<FString> _tags);
-
-	void SetRadius(const float _radius);
-
-	void SetLocation(const FVector& Location);
-
-	void SetDamage(const float _damage);
-
+	//衝突判定開始
 	UFUNCTION()
 	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	// 可視化できるようにするメソッド
 	void SetVisible(const bool _isvisible);
 
-	void SetCauseDamageActor(AActor* _actor);
-
-	void SetDamageInfo(const FDamageInfo& _damageInfo);
-
-	void SetHitJudgmentComponent(const UHitJudgmentComponent* _hitJudgmentComponent);
+	void SetDamageInfo(const FDamageInfo& _damageInfo);//ダメージ情報セット
+	void SetHitJudgmentComponent(const UHitJudgmentComponent* _hitJudgmentComponent);//使用している衝突判定クラス
 protected:
 
 	// 可視化用Mesh
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> m_VisualMesh;
 
+	//衝突判定をとる球
 	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<USphereComponent> m_HitSphere;//衝突判定をとる球
+	TObjectPtr<USphereComponent> m_HitSphere;
 
+	//アクティブ
 	UPROPERTY(VisibleAnywhere)
 	bool m_IsActive;
 
+	//表示非表示
 	UPROPERTY(VisibleAnywhere)
 	bool m_Visible;
 
 	//今後どちらにも当たる攻撃が出てきたときように配列にしておく
 	UPROPERTY(VisibleAnywhere)
-
 	TArray<FString> m_HitActorTags;
 
 	float m_Damage;
-
-	AActor* m_CauseDamageActor;
 
 	FDamageInfo m_DamageInfo;
 

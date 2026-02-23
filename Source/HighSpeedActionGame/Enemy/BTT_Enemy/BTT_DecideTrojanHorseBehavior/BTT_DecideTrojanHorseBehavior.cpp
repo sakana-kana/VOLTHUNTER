@@ -8,6 +8,14 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet/KismetMathLibrary.h"
 
+namespace {
+	constexpr float ShortDistanceLength = 600.f;
+	constexpr int8 MaxAttackCount = 4;
+	constexpr int8 MaxShortDistanceActionCount = 2;
+	constexpr int8 MaxLongDistanceActionCount = 2;
+}
+
+
 UBTT_DecideTrojanHorseBehavior::UBTT_DecideTrojanHorseBehavior() {
 	NodeName = TEXT("Decide TrojanHorse Behavior");
 }
@@ -39,22 +47,23 @@ void UBTT_DecideTrojanHorseBehavior::JudgmentDecideTrojanHorseBehavior(AAIContro
 
 	float Distance = FVector::Dist(ControllerPawn->GetActorLocation(), TargetActor->GetActorLocation());
 
-	if (Distance <= 600.f) {
-		if (ShortDistanceAttackNum % 2 == 0) {
+
+	if (Distance <= ShortDistanceLength) {
+		if (ShortDistanceAttackCount % MaxShortDistanceActionCount == 0) {
 			_nextState = 0;
 		}
-		else if (ShortDistanceAttackNum % 2 == 1) {
+		else if (ShortDistanceAttackCount % MaxShortDistanceActionCount == 1) {
 			_nextState = 1;
 		}
-		++ShortDistanceAttackNum;
+		++ShortDistanceAttackCount;
 	}
 	else {
-		if (LongDistanceAttackNum % 2 == 0) {
+		if (LongDistanceAttackCount % MaxLongDistanceActionCount == 0) {
 			_nextState = 2;
 		}
-		else if (LongDistanceAttackNum % 2 == 1) {
+		else if (LongDistanceAttackCount % MaxLongDistanceActionCount == 1) {
 			_nextState = 3;
 		}
-		++LongDistanceAttackNum;
+		++LongDistanceAttackCount;
 	}
 }

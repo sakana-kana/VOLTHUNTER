@@ -14,6 +14,7 @@
 #include "../Enemy/EnemyManager/EnemyManager.h"
 #include "../PlayerController/MainPlayerController.h"
 
+
 AGameMode_Ingame::AGameMode_Ingame()
 {
 	BGMManager = CreateDefaultSubobject<UGameBGMComponent>(TEXT("BGMManager"));
@@ -39,41 +40,11 @@ void AGameMode_Ingame::BeginPlay()
 	{
 		Manager->OnBossDead.AddDynamic(this, &AGameMode_Ingame::OnGameClear);
 		Manager->OnBossActive.AddDynamic(this, &AGameMode_Ingame::OnBossBattleStart);
+		Manager->OnBossActive.AddDynamic(this, &AGameMode_Ingame::PlayBossSequenceIfAvailable);
 		Manager->OnBeginPlay();
 	}
 
-	//FTimerHandle InitCameraTimer;
-	//GetWorldTimerManager().SetTimer(InitCameraTimer, [this]()
-	//	{
-	//		APlayerController* PC = GetWorld()->GetFirstPlayerController();
-	//		if (PC)
-	//		{
-	//			if (APawn* PlayerPawn = PC->GetPawn())
-	//			{
-	//				// コンポーネント取得
-	//				if (auto* CamComp = PlayerPawn->FindComponentByClass<UPlayer_CameraComponent>())
-	//				{
-	//					CamComp->PlayInGameOpening();
-	//				}
-	//			}
-	//		}
-	//	}, 0.1f, false);
 
-	//// UIの表示処理
-	//if (m_PlayerWidgetClass) // 変数名を変えていればここも変更
-	//{
-	//	APlayerController* PC = GetWorld()->GetFirstPlayerController();
-	//	if (PC)
-	//	{
-	//		//メンバー変数に代入する
-	//		m_CurrentWidgetInstance = CreateWidget<UUserWidget>(PC, m_PlayerWidgetClass);
-
-	//		if (m_CurrentWidgetInstance)
-	//		{
-	//			m_CurrentWidgetInstance->AddToViewport();
-	//		}
-	//	}
-	//}
 }
 
 
@@ -182,4 +153,8 @@ void AGameMode_Ingame::OnGameClear() {
 			MainPC->EnterResultMode();
 		}
 	}
+}
+
+void AGameMode_Ingame::PlayBossSequenceIfAvailable() {
+
 }

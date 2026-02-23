@@ -78,6 +78,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* m_InputPromptWidget;
 
+	// エディタからセットする移動中の効果音
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SplineMove|Sound")
+	USoundBase* m_SplineMoveSound;
+
+	// 音を再生・停止制御するためのコンポーネント
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SplineMove|Sound")
+	UAudioComponent* m_MoveAudioComponent;
 private:
 
 	bool m_RunningSplineMove;

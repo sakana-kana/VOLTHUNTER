@@ -34,10 +34,13 @@ public:
 	//衝突判定終了
 	void EndHitDetection();
 
+	//表示非表示セット
 	void SetAttackCollisionDetectionVisible(const bool _isVisible);
 
+	//半径セット
 	void SetRadius(const float _radius);
 
+	//ヒット時に通知を送るメソッド
 	UFUNCTION()
 	void NotifyAttackHit(const AActor* _hitActor)const;
 protected:
@@ -48,11 +51,11 @@ protected:
 	void SetLocationRelativeToActorRotation(const FVector _relativeLocation);
 
 protected:
-
-
+	//衝突判定の使用者
 	UPROPERTY()
 	const AActor* m_CollisionDetectionUser;
 
+	//攻撃用衝突判定ハンドル
 	FAttackCollisionHandle CollisionHandle;
 
 public:

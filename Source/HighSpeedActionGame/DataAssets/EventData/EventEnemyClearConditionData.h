@@ -1,4 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当：佐々木奏太
+//敵を全て倒すイベントで使用するデータクラス
 
 #pragma once
 

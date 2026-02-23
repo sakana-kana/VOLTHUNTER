@@ -28,7 +28,6 @@ void UHitJudgmentComponent::BeginPlay()
 }
 
 
-//衝突判定開始
 void UHitJudgmentComponent::BeginHitDetection(FDamageInfo& _damageinfo, const float _radius, FVector& _relativeLocation, const AActor& _actor, const TArray<FString>& _tag) {
 
 
@@ -52,12 +51,10 @@ void UHitJudgmentComponent::BeginHitDetection(FDamageInfo& _damageinfo, const fl
 
 }
 
-//衝突可能時間
 void UHitJudgmentComponent::PossibleHitTime(FVector& _relativeLocation) {
 	SetLocationRelativeToActorRotation(_relativeLocation);
 }
 
-//衝突判定終了
 void UHitJudgmentComponent::EndHitDetection() {
 	CollisionHandle.Release();
 }

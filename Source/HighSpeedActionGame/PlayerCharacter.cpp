@@ -2,6 +2,7 @@
 
 #include "PlayerCharacter.h"
 #include "GameMode/GameMode_Ingame.h"
+#include "SequenceWorldSubsystem/SequenceWorldSubsystem.h"
 #include "PlayerNotifySubSystem/PlayerNotifySubsystem.h"
 #include "PlayerComponent/Player_MovementComponent.h"
 #include "PlayerComponent/Player_CameraComponent.h"
@@ -33,7 +34,7 @@ namespace {
 // コンストラクタ
 APlayerCharacter::APlayerCharacter()
 	: m_IsBossBattleActive(false)
-	,m_MovementComponent(nullptr)
+	, m_MovementComponent(nullptr)
 	, m_CameraComponent(nullptr)
 	, m_EvasiveComponent(nullptr)
 	, m_AttackComponent(nullptr)
@@ -79,7 +80,6 @@ APlayerCharacter::APlayerCharacter()
 	, m_IsHit(false)
 	, m_IsEnhancedAttack(false)
 	, m_IsDebugGodMode(false)
-
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -276,10 +276,14 @@ void APlayerCharacter::BeginPlay()
 	{
 		if (UGameplayAreaEventManager* EventManager = World->GetSubsystem<UGameplayAreaEventManager>())
 		{
-			// ボス戦開始通知を登録
+			//ボス戦開始通知を登録
 			EventManager->OnBossActive.AddDynamic(this, &APlayerCharacter::OnBossBattleStarted);
-			// ボス撃破通知を登録
+			//ボス撃破通知を登録
 			EventManager->OnBossDead.AddDynamic(this, &APlayerCharacter::OnBossBattleEnded);
+		}
+		if (USequenceWorldSubsystem* SequenceSubsystem = World->GetSubsystem<USequenceWorldSubsystem>())
+		{
+			SequenceSubsystem->OnBossSequenceFinished.AddDynamic(this, &APlayerCharacter::EnableControl);
 		}
 	}
 }
@@ -383,6 +387,27 @@ void APlayerCharacter::OnRespawn()
 
 	OnPlayerRespawnBP();
 
+	////死亡時のメッシュリセット
+	//if (USkeletalMeshComponent* MeshComp = GetMesh())
+	//{
+	//	//物理シュミレーション停止
+	//	MeshComp->SetAllBodiesSimulatePhysics(false);
+	//	MeshComp->SetSimulatePhysics(false);
+
+	//	MeshComp->SetAllUseCCD(false);
+
+	//	MeshComp->SetCollisionProfileName(TEXT("CharacterMesh"));
+	//	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//	MeshComp->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//	MeshComp->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, 0.0f, 0.0f));
+	//}
+	//if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+	//{
+	//	//コリジョンの無効化
+	//	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//	CapsuleComp->SetCollisionProfileName("Pawn");
+	//}
+
 	//移動復帰
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
@@ -430,9 +455,15 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 	PlayerTakeDamege(_damageInfo.Damage);
 	m_IsDamage = true;
 
+	if (m_CameraComponent)
+	{
+		m_CameraComponent->CameraShakEnd();
+	}
+
+
 	if (m_PlayerHP <= 0)
 	{
-		PlayerDie();
+		PlayerDying();
 		return;
 	}
 
@@ -461,7 +492,6 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 	m_AttackComponent->ResetAttack();
 	//UE_LOG(LogTemp, Warning, TEXT("HP--"));
 
-
 	if (m_PlayerHP > 0)
 	{
 		if (m_AbilityPlayer_Damage) {
@@ -481,7 +511,7 @@ bool APlayerCharacter::GetIsEnhancedAttack() const
 	return m_IsEnhancedAttack;
 }
 
-void APlayerCharacter::PlayerDie()
+void APlayerCharacter::PlayerDying()
 {
 	if (m_IsDie)return;
 	m_IsDie = true;
@@ -491,6 +521,78 @@ void APlayerCharacter::PlayerDie()
 		m_IsBossBattleActive = false;
 	}
 
+	if (m_CameraComponent)
+	{
+		m_CameraComponent->OnPlayerDie();
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ULocalPlayer* LP = PC->GetLocalPlayer())
+		{
+			if (UPlayerNotifySubsystem* Subsystem = LP->GetSubsystem<UPlayerNotifySubsystem>())
+			{
+				Subsystem->NotifyPlayerDying(this);
+			}
+		}
+	}
+	if (OnPlayerDying.IsBound())
+	{
+		OnPlayerDying.Broadcast(this);
+	}
+
+	//入力停止
+	DisableInput(Cast<APlayerController>(GetController()));
+
+	//移動停止
+	if (!m_IsFallDie) {
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	//if (USkeletalMeshComponent* MeshComp = GetMesh())
+	//{
+	//	MeshComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+	//	MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+
+	//	//メッシュのコリジョン（物理）を確実に有効化する
+	//	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//	//オブジェクトタイプを物理ボディに設定
+	//	MeshComp->SetCollisionObjectType(ECC_PhysicsBody);
+	//	//地面と動的オブジェクトブロックする
+	//	MeshComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	//	MeshComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+	//	
+	//	//CCD(Continuous Collision Detection)をオンにして高速貫通を防ぐ
+	//	MeshComp->SetAllUseCCD(true);
+
+	//	//全てのボーンで物理シュミレーション
+	//	MeshComp->SetAllBodiesSimulatePhysics(true);
+	//	MeshComp->SetSimulatePhysics(true);
+	//	MeshComp->WakeAllRigidBodies();
+	//}
+	//if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+	//{
+	//	//コリジョンの無効化
+	//	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+	//}
+
+	// BP に通知
+	OnPlayerDieBP(m_IsFallDie);
+
+	if (m_AbilityPlayer_Die)
+	{
+		m_AbilitySystemComponent->TryActivateAbilityByClass(m_AbilityPlayer_Die);
+	}
+
+}
+
+void APlayerCharacter::PlayerDied()
+{
+	// サブシステムに今までの「完全に死んだ」通知を送る
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (ULocalPlayer* LP = PC->GetLocalPlayer())
@@ -502,38 +604,18 @@ void APlayerCharacter::PlayerDie()
 		}
 	}
 
-	//デリゲート通知
+	// デリゲート通知
 	if (OnPlayerDied.IsBound())
 	{
 		OnPlayerDied.Broadcast(this);
-	}
-
-	m_CameraComponent->ResetCamera();
-
-	//入力停止
-	DisableInput(Cast<APlayerController>(GetController()));
-
-	//移動停止
-	if (!m_IsFallDie) {
-		GetCharacterMovement()->StopMovementImmediately();
-		GetCharacterMovement()->DisableMovement();
-	}
-
-	// BP に通知
-	OnPlayerDieBP(m_IsFallDie);
-
-	if (m_AbilityPlayer_Die)
-	{
-		m_AbilitySystemComponent->TryActivateAbilityByClass(m_AbilityPlayer_Die);
 	}
 
 	if (AGameMode_Ingame* GameMode = Cast<AGameMode_Ingame>(GetWorld()->GetAuthGameMode()))
 	{
 		GameMode->RequestRespawn(this);
 	}
-
-
 }
+
 
 void APlayerCharacter::FellOutOfWorld(const UDamageType& dmgType)
 {
@@ -543,7 +625,7 @@ void APlayerCharacter::FellOutOfWorld(const UDamageType& dmgType)
 		return;
 	}
 	m_IsFallDie = true;
-	PlayerDie();
+	PlayerDying();
 }
 
 //ノックバック
@@ -791,6 +873,7 @@ void APlayerCharacter::OpeningCamera()
 void APlayerCharacter::OnBossBattleStarted()
 {
 	m_IsBossBattleActive = true;
+	DisableControl();
 }
 
 void APlayerCharacter::OnBossBattleEnded()
@@ -856,6 +939,28 @@ void APlayerCharacter::Debug_ToggleOverCharge()
 
 }
 
+void APlayerCharacter::Debug_TogglePlayerDie()
+{
+	PlayerDying();
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("God PlayerDie"));
+	}
+
+}
+
+void APlayerCharacter::Debug_WarpBossEvent()
+{
+	FVector TargetLocation(-31013.0f, 6854.0f, 4600.0f);
+
+	TeleportTo(TargetLocation, GetActorRotation());
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("GodWarp"));
+	}
+}
+
 void APlayerCharacter::CheckJustEvasiveTargetValidity()
 {
 	// ターゲットがいなければ何もしない
@@ -893,3 +998,4 @@ void APlayerCharacter::CheckJustEvasiveTargetValidity()
 	}
 
 }
+

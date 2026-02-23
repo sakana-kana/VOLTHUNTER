@@ -84,6 +84,9 @@ protected:
 
 	//UPROPERTY()
 	//UPostProcess* m_PostProcessActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|UI")
+	TSubclassOf<UUserWidget> SkillHitUIClass;
 private:
 
 	TSubclassOf<UGameplayAbility> m_CurrentAbilitySkill;
@@ -112,4 +115,8 @@ private:
 	//‘OƒtƒŒ[ƒ€‚Ìó‘Ô‚ğ•Û‘¶‚·‚é
 	bool m_bLastUsableState;
 
+	UPROPERTY()
+	UUserWidget* m_ActiveHitUIInstance;
+
+	bool m_bHasShownHitUI;
 };

@@ -34,6 +34,19 @@ void AEnemy_TrojanHorseBoss::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 }
 
+void AEnemy_TrojanHorseBoss::HandleBossCase()
+{
+	Super::HandleBossCase();
+
+	if (GetMesh()) {
+		GetMesh()->SetVisibility(false, true);
+	}
+
+	if (m_BossCutMontage) {
+		PlayAnimMontage(m_BossCutMontage, 1.f);
+	}
+}
+
 void AEnemy_TrojanHorseBoss::TakeDamage(const FDamageInfo& _damageInfo) {
 	if (!m_HitStopComponent || !m_IsTakeDamage)return;
 

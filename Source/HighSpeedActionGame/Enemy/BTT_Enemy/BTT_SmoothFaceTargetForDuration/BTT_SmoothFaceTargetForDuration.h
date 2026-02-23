@@ -26,13 +26,14 @@ protected:
 	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
+	//ターゲットの方向向く
 	void FacingTheTargetActor(const float _deltaTime);
 
-	AEnemyBase* UseActor;
-	AActor* TargetActor;
+	AEnemyBase* UseActor;//使用者
+	const AActor* TargetActor;
 
-	float Timer;
+	float Timer;//タイマー
 
 	UPROPERTY(EditAnywhere, Category = "Timer")
-	FName TargetActorKeyName;	
+	FName TargetActorKeyName;
 };

@@ -32,7 +32,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AttackCollisionInfo")
-	FAttackCollisionParam m_AttackCollisionParam;
+	FAttackCollisionParam m_AttackCollisionParam;//攻撃判定パラメーター
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AttackData")

@@ -21,8 +21,9 @@ public:
 	AEnemy_TrojanHorseBoss();
 	virtual void TakeDamage(const FDamageInfo& _damageInfo)override;
 	void Tick(float DeltaTime)override;
+
+	virtual void HandleBossCase()override;
 protected:
-	// 胴体用のBoxコリジョンコンポーネント
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
-	UBoxComponent* BodyBox;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TObjectPtr<UAnimMontage> m_BossCutMontage;
 };

@@ -25,10 +25,10 @@ public:
     FBlackboardKeySelector TargetLocationKey;
 protected:
     UPROPERTY(EditAnywhere, Category = "MoveTo")
-    float AcceptanceRadius = 50.f;
+    float AcceptanceRadius = 50.f;//到達半径
 
 private:
-    FDelegateHandle MoveCompletedHandle;
+    FDelegateHandle MoveCompletedHandle;//移動終了デリゲード
 
     // 移動終了時に呼ばれる
     void OnMoveCompleted(FAIRequestID RequestID,const FPathFollowingResult& Result,UBehaviorTreeComponent* OwnerComp);

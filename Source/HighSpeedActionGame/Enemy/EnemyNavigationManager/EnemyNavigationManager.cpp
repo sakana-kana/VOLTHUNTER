@@ -100,13 +100,6 @@ void UEnemyNavigationManager::SetChasingEnemiesTargetLocations() {
 	int32 ChasingEnemiesNum = m_ChasingEnemies.Num();
 	FVector PlayerPos = PlayerChara->GetActorLocation();
 
-	//if (ChasingEnemiesNum == 1) {
-	//	m_ChasingEnemies[0]->SetMoveTargetLocation(PlayerPos);
-	//	return;
-	//}
-
-
-
 	FVector PlayerForwardVec = (m_ChasingEnemies[0]->GetActorLocation() - PlayerPos).GetSafeNormal();
 
 	TArray<FVector> TargetPoss;

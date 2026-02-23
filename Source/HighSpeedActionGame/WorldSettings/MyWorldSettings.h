@@ -7,6 +7,8 @@
 #include "GameFramework/WorldSettings.h"
 #include "MyWorldSettings.generated.h"
 
+class ALevelSequenceActor;
+
 /**
  * 
  */
@@ -25,4 +27,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	bool m_AttackCollisionPool = true;
+
+	bool m_SequenceWorldSubsystem = true;
+
+	UPROPERTY(EditAnywhere, Category = "Cinematics")
+	TObjectPtr<ALevelSequenceActor> BossSequenceActor;
 };

@@ -8,6 +8,8 @@
 #include "Player_CameraComponent.h"
 #include "Player_ElectroGaugeComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "../PlayerCharacter.h"
 
 //#include "../PostProcess/PostProcess.h"
 
@@ -75,6 +77,29 @@ void UPlayer_SkillComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		_updateThunderFlash(DeltaTime);
 
+	}
+
+	if (m_IsSkillActive && !m_bHasShownHitUI && m_Player)
+	{
+		// プレイヤー側のヒットフラグを確認
+		if (m_Player->GetIsHit())
+		{
+			// UIクラスが設定されているか確認
+			if (SkillHitUIClass)
+			{
+				// UIを作成
+				m_ActiveHitUIInstance = CreateWidget<UUserWidget>(GetWorld(), SkillHitUIClass);
+
+				if (m_ActiveHitUIInstance)
+				{
+					// 画面に追加
+					m_ActiveHitUIInstance->AddToViewport();
+				}
+			}
+
+			// 表示済みフラグを立てる（これで連発を防ぐ）
+			m_bHasShownHitUI = true;
+		}
 	}
 
 	//現在の使用可否を取得
@@ -201,6 +226,9 @@ void UPlayer_SkillComponent::StartThunderFlash()
 	m_Teleported = false;
 	m_DelayElapsed = 0.f;
 
+	m_bHasShownHitUI = false;
+	m_ActiveHitUIInstance = nullptr;
+
 	m_StartLocation = m_Player->GetActorLocation();
 	m_TargetLocation = m_StartLocation + m_Player->GetActorForwardVector() * m_Skill01Distance;
 
@@ -267,6 +295,12 @@ void UPlayer_SkillComponent::EndSkill()
 
 	m_IsSkillActive = false;
 	m_Player->SetInvincible(false);
+
+	if (m_ActiveHitUIInstance)
+	{
+		m_ActiveHitUIInstance->RemoveFromParent();
+		m_ActiveHitUIInstance = nullptr;
+	}
 
 	m_Player->GetCapsuleComponent()->SetCollisionResponseToChannel(
 		ECC_Pawn,

@@ -75,7 +75,7 @@ void UBTT_Enemy_MoveToEncircleTarget::TickTask(UBehaviorTreeComponent& OwnerComp
 				UnBindDelegate(AIController);
 				AIController->StopMovement();
 				FinishLatentTask(*CachedOwnerComp, EBTNodeResult::Succeeded);
-				return; // ˆ—‚Ì‘ŠúI—¹
+				return;
 			}
 		}
 	}

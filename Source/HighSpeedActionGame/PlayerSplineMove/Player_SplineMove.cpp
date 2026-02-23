@@ -12,6 +12,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../PlayerCharacter.h"
 #include "Components/WidgetComponent.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 APlayer_SplineMove::APlayer_SplineMove()
@@ -44,6 +45,10 @@ APlayer_SplineMove::APlayer_SplineMove()
 	m_InputPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // 常にカメラの方を向く設定（Worldにすると板ポリ状になる）
 	m_InputPromptWidget->SetDrawAtDesiredSize(true); // ウィジェットのサイズに合わせて自動調整
 	m_InputPromptWidget->SetVisibility(false); // 最初は非表示
+
+	m_MoveAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MoveAudioComponent"));
+	m_MoveAudioComponent->SetupAttachment(RootComponent);
+	m_MoveAudioComponent->SetAutoActivate(false);
 }
 
 // Called when the game starts or when spawned
@@ -91,6 +96,11 @@ void APlayer_SplineMove::Tick(float DeltaTime)
 		m_SplineEffectComponent->SetWorldLocationAndRotation(Location, Rotation);
 	}
 
+	if (m_MoveAudioComponent)
+	{
+		m_MoveAudioComponent->SetWorldLocation(Location);
+	}
+
 	if (m_CurrentDistance >= SplineLength)
 	{
 		m_RunningSplineMove = false;
@@ -124,6 +134,11 @@ void APlayer_SplineMove::Tick(float DeltaTime)
 			m_SplineEffectComponent->SetVisibility(false, true);
 		}
 
+		if (m_MoveAudioComponent && m_MoveAudioComponent->IsPlaying())
+		{
+			m_MoveAudioComponent->Stop();
+		}
+
 		m_MovingActor = nullptr;
 	}
 }
@@ -134,6 +149,7 @@ void APlayer_SplineMove::RequestStartSplineMove(AActor* RequestActor)
 {
 	if (m_RunningSplineMove) return;
 	if (RequestActor != m_CandidateActor) return;
+	if (m_SkillComponent && m_SkillComponent->GetIsSkillActive())return;
 
 	if (m_InputPromptWidget)
 	{
@@ -174,6 +190,12 @@ void APlayer_SplineMove::RequestStartSplineMove(AActor* RequestActor)
 		}
 	}
 
+	if (m_MoveAudioComponent && m_SplineMoveSound)
+	{
+		m_MoveAudioComponent->SetSound(m_SplineMoveSound);
+		m_MoveAudioComponent->Play();
+	}
+
 	if (m_SplineEffectComponent)
 	{
 		if (m_SplineMoveEffect)
@@ -192,6 +214,7 @@ void APlayer_SplineMove::RequestStartSplineMove(AActor* RequestActor)
 			UE_LOG(LogTemp, Error, TEXT("SplineMoveEffect is NULL"));
 		}
 	}
+
 }
 
 void APlayer_SplineMove::OnStartOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

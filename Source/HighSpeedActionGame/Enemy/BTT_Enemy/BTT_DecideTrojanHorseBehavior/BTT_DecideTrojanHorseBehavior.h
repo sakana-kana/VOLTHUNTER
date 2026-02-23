@@ -20,6 +20,7 @@ public:
 	UBTT_DecideTrojanHorseBehavior();
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
+	//次の行動決定
 	void JudgmentDecideTrojanHorseBehavior(AAIController* _contoroller, UBlackboardComponent* BB, int32& _nextState);
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
@@ -28,6 +29,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector m_TargetActorKeyName;
 
-	int32 ShortDistanceAttackNum = 0;
-	int32 LongDistanceAttackNum = 0;
+	int32 ShortDistanceAttackCount = 0;//近距離攻撃カウント
+	int32 LongDistanceAttackCount = 0;//遠距離攻撃カウント
+
+
 };

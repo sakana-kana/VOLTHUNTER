@@ -54,6 +54,8 @@ class UPlayer_SkillComponent;
 class APlayer_SplineMove;
 class APlayerSword;
 
+//やられた（HP0になった）時の通知用デリゲート
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDyingDelegate, APlayerCharacter*, DyingCharacter);
 //死亡通知用デリゲート
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDiedDelegate, APlayerCharacter*, DeadCharacter);
 
@@ -110,7 +112,7 @@ public:
 	//ヒットしたかを取得
 	bool GetIsHit()const { return m_IsHit; }
 	void SetIsHit(bool IsHit) { m_IsHit = IsHit; }
-	
+
 	//ダメージを受けたかどうか
 	bool GetIsDamage()const { return m_IsDamage; }
 	void SetIsDamage(bool _IsDamage) { m_IsDamage = _IsDamage; }
@@ -173,11 +175,21 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Death")
 	void OnPlayerRespawnBP();
 
+	//死亡時用のデリゲート
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnPlayerDiedDelegate OnPlayerDied;
+
+	//やられた時用のデリゲート
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnPlayerDyingDelegate OnPlayerDying;
+public:
+	//死亡時
+	UFUNCTION(BlueprintCallable, Category = "Player|Death")
+	void PlayerDied();
+
 private:
-	//死亡
-	void PlayerDie();
+	//やられた時
+	void PlayerDying();
 	virtual void FellOutOfWorld(const UDamageType& dmgType) override;
 
 	//ノックバック
@@ -208,6 +220,7 @@ public:
 	void DisableControl();
 
 	//操作と移動を復帰
+	UFUNCTION(BlueprintCallable, Category = "Player|Status")
 	void EnableControl();
 
 public:
@@ -220,9 +233,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerInput")
 	void Debug_ToggleOverCharge();
 
+	//プレイヤーを死亡させる
+	UFUNCTION(BlueprintCallable, Category = "PlayerInput")
+	void Debug_TogglePlayerDie();
+
+	//プレイヤーをボスの手前までワープさせる
+	UFUNCTION(BlueprintCallable, Category = "PlayerInput")
+	void Debug_WarpBossEvent();
+
+
 private:
-		// ジャスト回避対象の距離や生存を確認し、更新する
-		void CheckJustEvasiveTargetValidity();
+	// ジャスト回避対象の距離や生存を確認し、更新する
+	void CheckJustEvasiveTargetValidity();
+
 
 public:
 	//===コンポーネント===

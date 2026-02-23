@@ -22,11 +22,11 @@
 #include "../Enemy/EnemyNavigationManager/EnemyNavigationManager.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemComponent.h"
+#include "../SequenceWorldSubsystem/SequenceWorldSubsystem.h"
 
 // Sets default values
 AEnemyBase::AEnemyBase()
-	: m_AbilitySystemComponent(nullptr)
-	, m_EnemyParam()
+	: m_EnemyParam()
 	, m_EnemyTypeFlags()
 	, m_HitStopComponent(nullptr)
 	, m_DamageMontage(nullptr)
@@ -52,9 +52,6 @@ AEnemyBase::AEnemyBase()
 
 	// AddUniqueでタグが重複しないようになる
 	Tags.AddUnique(FName(TEXT("Enemy")));
-
-	//アビリティ
-	m_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	m_HitStopComponent = CreateDefaultSubobject<UHitStopComponent>(TEXT("HitStopComponent"));
 
@@ -136,12 +133,6 @@ void AEnemyBase::Tick(float DeltaTime)
 
 }
 
-// Called to bind functionality to input
-void AEnemyBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
 void AEnemyBase::SetActive(const bool _isActive) {
 	m_IsActive = _isActive;
 	SetActorHiddenInGame(!_isActive);       // 描画の有効無効//falseで隠す
@@ -205,10 +196,6 @@ void AEnemyBase::SetEnemyActiveMoveComponent(const bool _isActive) {
 			MoveComp->StopMovementImmediately();
 		}
 	}
-}
-
-bool AEnemyBase::GetIsActive()const {
-	return m_IsActive;
 }
 
 bool AEnemyBase::GetBoolBBIsTakingDamage()const {
@@ -292,10 +279,6 @@ void AEnemyBase::HandleDamageTakenAI() {
 	}
 }
 
-UAbilitySystemComponent* AEnemyBase::GetAbilitySystemComponent() const {
-	return m_AbilitySystemComponent;
-}
-
 void AEnemyBase::SetBBMoveToLocation(const FVector _moveToLocation, FName _keyName = "MoveLocation") {
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (AIController)
@@ -322,9 +305,7 @@ void AEnemyBase::OnDamageEnd() {
 
 	SetBBIsTakingDamage(false);
 }
-void AEnemyBase::OnAttackEnd() {
 
-}
 void AEnemyBase::OnDeath() {
 	UEnemyManager* EnemyMng = GetWorld()->GetSubsystem<UEnemyManager>();
 	if (EnemyMng)
@@ -406,8 +387,10 @@ void AEnemyBase::UseDamageInformation(const FDamageInfo& _damageInfo) {
 
 	if (m_EnemyParam.m_Hp > 0) {
 		//吹っ飛ばし
-		//BlowEnemy(_damageInfo.KnockbackDirection, _damageInfo.KnockbackScale);
+		BlowEnemy(_damageInfo.KnockbackDirection, _damageInfo.KnockbackScale);
 	}
+
+
 }
 
 
@@ -435,14 +418,6 @@ void AEnemyBase::SetBBIsTakingDamage(const bool _isTakingDamage) {
 		}
 	}
 
-}
-
-bool AEnemyBase::GetIsDeath()const {
-	return m_IsDeath;
-}
-
-bool AEnemyBase::GetIsDying()const {
-	return m_IsDying;
 }
 
 void AEnemyBase::ResetEnemyTypeFlags() {
@@ -497,8 +472,9 @@ void AEnemyBase::OnSeeTarget() {
 
 	Subsystem->AddChasingEnemy(this);
 
-	m_CanSeeTarget = true;
 	AAIController* AIController = Cast<AAIController>(GetController());
+	if (!AIController)return;
+	m_CanSeeTarget = true;
 	if (AIController)
 	{
 		AIController->StopMovement();
@@ -558,4 +534,17 @@ void AEnemyBase::PauseEnemy(bool _isPouse) {
 
 	// 5. Actor Tick制御
 	SetActorTickEnabled(!_isPouse);
+}
+
+void AEnemyBase::HandleBossCase() {
+	if (USequenceWorldSubsystem* Manager = GetWorld()->GetSubsystem<USequenceWorldSubsystem>())
+	{
+		Manager->OnBossSequenceFinished.AddDynamic(this, &AEnemyBase::OnBossSequenceFinished);
+	}
+
+	SetAIControllerIsActive(false);
+}
+
+void AEnemyBase::OnBossSequenceFinished() {
+	SetAIControllerIsActive(true);
 }

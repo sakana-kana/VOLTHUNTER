@@ -1,4 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当：佐々木奏太
+//サウンド再生アニメ通知クラス
 
 #pragma once
 
@@ -17,7 +18,7 @@ class HIGHSPEEDACTIONGAME_API UAnimNotifyPlaySE : public UAnimNotify
 public:
     // 再生するサウンド
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
-    TObjectPtr<USoundBase> m_SoundToPlay;
+    TObjectPtr<USoundBase> m_SoundToPlay;//再生用サウンド
 
     // Notify発動時に呼ばれる
     virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;

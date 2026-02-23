@@ -603,8 +603,9 @@ void UPlayer_AttackComponent::AttackFirstStepBegin()
 		{
 			ToEnemy.Normalize();
 		}
+		float WarpDist = m_LockedAttackTarget->GetWarpOffsetDistance();
+		m_AttackTargetLocation = EnemyLocation - (ToEnemy * WarpDist);
 
-		m_AttackTargetLocation = EnemyLocation - ToEnemy * PlayerParam.AttackEnemyFront;
 		m_AttackTargetLocation.Z = PlayerLocation.Z;
 
 		m_Player->SetActorRotation(ToEnemy.Rotation());
@@ -714,7 +715,9 @@ void UPlayer_AttackComponent::AttackFirstStepBegin()
 			ToEnemy.Normalize();
 		}
 
-		m_AttackTargetLocation = EnemyLocation - ToEnemy * PlayerParam.AttackEnemyFront;
+		float WarpDist = NewEnemyTarget->GetWarpOffsetDistance();
+		m_AttackTargetLocation = EnemyLocation - (ToEnemy * WarpDist);
+
 		m_AttackTargetLocation.Z = PlayerLocation.Z;
 
 		m_Player->SetActorRotation(ToEnemy.Rotation());

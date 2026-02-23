@@ -18,6 +18,7 @@ void UAnimNotify_FireProjectile::Notify(USkeletalMeshComponent* MeshComp, UAnimS
 	UWorld* World = MeshComp->GetWorld();
 	if (World)
 	{
+		//生成
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 		SpawnParams.Owner = MeshComp->GetOwner();
@@ -26,8 +27,10 @@ void UAnimNotify_FireProjectile::Notify(USkeletalMeshComponent* MeshComp, UAnimS
 
 		if (!Projectile)return;
 
+		//攻撃判定パラメーターセット
 		Projectile->SetAttackCollisionParam(m_AttackCollisionParam);
 
+		//ダメージセット
 		FDamageInfo DamageInfo;
 		DamageInfo.AttackActor = MeshComp->GetOwner();
 		DamageInfo.Damage = m_AttackData->Damage;

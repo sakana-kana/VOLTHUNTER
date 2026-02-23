@@ -61,6 +61,7 @@ void UAttackCollisionPoolSubsystem::CreatePool(const AAttackCollisionFactory* _f
 }
 
 FAttackCollisionHandle UAttackCollisionPoolSubsystem::AcquireHandle() {
+	//インスタンスが取れれば、インスタンスをハンドルにセットして渡す
 	AAttackCollisionDetection* Instance = GetInactiveAttackCollision();
 
 	if (!Instance)

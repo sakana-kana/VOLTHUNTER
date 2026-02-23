@@ -10,26 +10,29 @@
 class UAnimMontage;
 
 /**
- * 
+ *
  */
 UCLASS()
 class HIGHSPEEDACTIONGAME_API UBTT_PlayMontage : public UBTTaskNode
 {
 	GENERATED_BODY()
-	
+
 public:
-    UBTT_PlayMontage();
+	UBTT_PlayMontage();
 
-    /** 再生するモンタージュ */
-    UPROPERTY(EditAnywhere, Category = "Montage")
-    UAnimMontage* MontageToPlay;
+	/** 再生するモンタージュ */
+	UPROPERTY(EditAnywhere, Category = "Montage")
+	UAnimMontage* MontageToPlay;
 
-    virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+	virtual  void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds);
 protected:
-    /** モンタージュ終了時のコールバック */
-    void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp);
+	/** モンタージュ終了時のコールバック */
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted, UBehaviorTreeComponent* OwnerComp);
 
-    /** Delegate登録のためのハンドルを保持 */
-    FDelegateHandle MontageEndedDelegateHandle;
+	/** Delegate登録のためのハンドルを保持 */
+	FDelegateHandle MontageEndedDelegateHandle;
+
+	bool m_DelegateBound = false;
+	UBehaviorTreeComponent* CachedOwnerComp = nullptr;
 };
