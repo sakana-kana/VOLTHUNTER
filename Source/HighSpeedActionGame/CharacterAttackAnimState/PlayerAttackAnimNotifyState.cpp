@@ -42,7 +42,7 @@ void UPlayerAttackAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp,
 	DamageInfo.HitStopTime = m_AttackData->HitStopTime;
 	DamageInfo.IsEnhancedAttack = Player->GetIsEnhancedAttack();
 
-	HitJudgmentComponen->BeginHitDetection(DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *OwnerActor, m_AttackCollisionParam.HitTag);
+	HitJudgmentComponen->BeginHitDetection(DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *OwnerActor, m_AttackCollisionParam.HitTag, TotalDuration);
 	if (m_AttackCollisionParam.Visible) {
 		HitJudgmentComponen->SetAttackCollisionDetectionVisible(true);
 	}

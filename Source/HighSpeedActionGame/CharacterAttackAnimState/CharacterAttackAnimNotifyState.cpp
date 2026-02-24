@@ -34,7 +34,7 @@ void UCharacterAttackAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshCo
 	DamageInfo.HitStopTime = m_AttackData->HitStopTime;
 
 
-	HitJudgmentComponen->BeginHitDetection(DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *OwnerActor,m_AttackCollisionParam.HitTag);
+	HitJudgmentComponen->BeginHitDetection(DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *OwnerActor,m_AttackCollisionParam.HitTag, TotalDuration);
 	if (m_AttackCollisionParam.Visible) {
 		HitJudgmentComponen->SetAttackCollisionDetectionVisible(true);
 	}

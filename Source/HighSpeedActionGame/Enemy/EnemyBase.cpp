@@ -389,8 +389,6 @@ void AEnemyBase::UseDamageInformation(const FDamageInfo& _damageInfo) {
 		//吹っ飛ばし
 		BlowEnemy(_damageInfo.KnockbackDirection, _damageInfo.KnockbackScale);
 	}
-
-
 }
 
 

@@ -28,7 +28,7 @@ void UHitJudgmentComponent::BeginPlay()
 }
 
 
-void UHitJudgmentComponent::BeginHitDetection(FDamageInfo& _damageinfo, const float _radius, FVector& _relativeLocation, const AActor& _actor, const TArray<FString>& _tag) {
+void UHitJudgmentComponent::BeginHitDetection(FDamageInfo& _damageinfo, const float _radius, FVector& _relativeLocation, const AActor& _actor, const TArray<FString>& _tag, const float _activeTime) {
 
 
 	m_CollisionDetectionUser = &_actor;
@@ -38,16 +38,16 @@ void UHitJudgmentComponent::BeginHitDetection(FDamageInfo& _damageinfo, const fl
 
 	if (!Pool) return;
 
-	CollisionHandle = Pool->AcquireHandle();
+	m_CollisionHandle = Pool->AcquireHandle();
 
-	if (!CollisionHandle.IsValid()) return;
+	if (!m_CollisionHandle.IsValid()) return;
 
 	FVector CharacterLocation = m_CollisionDetectionUser->GetActorLocation();
 	FRotator CharacterRotation = m_CollisionDetectionUser->GetActorRotation();
 	FVector WorldOffset = CharacterRotation.RotateVector(_relativeLocation);
 	FVector RelativeLocation = CharacterLocation + WorldOffset;
 
-	CollisionHandle.Initialize(*this, _damageinfo, RelativeLocation, _tag, _radius);
+	m_CollisionHandle.Initialize(*this, _damageinfo, RelativeLocation, _tag, _radius, _activeTime);
 
 }
 
@@ -56,12 +56,12 @@ void UHitJudgmentComponent::PossibleHitTime(FVector& _relativeLocation) {
 }
 
 void UHitJudgmentComponent::EndHitDetection() {
-	CollisionHandle.Release();
+	m_CollisionHandle.Release();
 }
 
 void UHitJudgmentComponent::SetAttackCollisionDetectionVisible(const bool _isVisible) {
-	if (!CollisionHandle.IsValid()) return;
-	CollisionHandle.SetVisible(_isVisible);
+	if (!m_CollisionHandle.IsValid()) return;
+	m_CollisionHandle.SetVisible(_isVisible);
 }
 
 void UHitJudgmentComponent::SetRadius(const float _radius) {
@@ -69,13 +69,13 @@ void UHitJudgmentComponent::SetRadius(const float _radius) {
 }
 
 void UHitJudgmentComponent::SetLocationRelativeToActorRotation(const FVector _relativeLocation) {
-	if (!m_CollisionDetectionUser || !CollisionHandle.IsValid())return;
+	if (!m_CollisionDetectionUser || !m_CollisionHandle.IsValid())return;
 
 	FVector CharacterLocation = m_CollisionDetectionUser->GetActorLocation();
 	FRotator CharacterRotation = m_CollisionDetectionUser->GetActorRotation();
 	FVector WorldOffset = CharacterRotation.RotateVector(_relativeLocation);
 
-	CollisionHandle.SetCollisionWorldLocation(CharacterLocation + WorldOffset);
+	m_CollisionHandle.SetCollisionWorldLocation(CharacterLocation + WorldOffset);
 }
 
 void UHitJudgmentComponent::NotifyAttackHit(const AActor* _hitActor) const {

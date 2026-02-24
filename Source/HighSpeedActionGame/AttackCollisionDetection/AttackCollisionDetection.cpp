@@ -74,7 +74,6 @@ void AAttackCollisionDetection::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (!m_IsActive) { return; }
 
-
 	if (!m_Visible) { return; }
 	//動的にコリジョンサイズが変わるかも知れないので記入しておく
 	// スフィアの半径取得

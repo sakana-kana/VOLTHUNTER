@@ -42,7 +42,7 @@ struct FEnemyParam
 
 
 UCLASS()
-class HIGHSPEEDACTIONGAME_API AEnemyBase : public ACharacter, public IDamageable, public IAbilitySystemInterface
+class HIGHSPEEDACTIONGAME_API AEnemyBase : public ACharacter, public IDamageable
 {
 	GENERATED_BODY()
 
@@ -133,7 +133,7 @@ protected:
 	virtual void ResetParam();
 
 	//ダメージ情報使用
-	void UseDamageInformation(const FDamageInfo& _damageInfo);
+	virtual void UseDamageInformation(const FDamageInfo& _damageInfo);
 
 	//プレイヤーの方向を瞬時に向く
 	void FacePlayerDirection();
@@ -197,7 +197,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
 	bool m_IsTakingDamage;//ダメージ中かどうかのフラグ
 
-	bool m_CanSeeTarget;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enemy")
+	bool m_CanSeeTarget;//ターゲットを補足しているか
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
 	float m_DamageTime;//ダメージ時間
 

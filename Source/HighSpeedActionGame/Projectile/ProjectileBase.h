@@ -38,6 +38,9 @@ public:
 	void OnCollisionTick();
 	void OnCollisionEnd();
 
+	UFUNCTION()
+	void HandlePlayerDeath(AActor* _actor);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Projectile")
 	TObjectPtr<UHitJudgmentComponent> m_HitJudgmentComponent;

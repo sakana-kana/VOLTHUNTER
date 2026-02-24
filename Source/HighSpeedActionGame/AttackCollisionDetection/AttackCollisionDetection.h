@@ -78,4 +78,5 @@ protected:
 	FDamageInfo m_DamageInfo;
 
 	const UHitJudgmentComponent* m_HitJudgmentComponent;
+
 };

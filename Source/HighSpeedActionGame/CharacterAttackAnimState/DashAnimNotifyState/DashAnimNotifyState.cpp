@@ -116,35 +116,47 @@ bool UDashAnimNotifyState::IsWallInFront()const {
 		return false;
 	}
 
+	//角度とラインの数
+	constexpr float ConeHalfAngleDegrees = 30.f;
+	constexpr int32 NumTraces = 5;
+
 	FVector Start = CachedCharacter->GetActorLocation();
 	FVector Forward = CachedCharacter->GetActorForwardVector();
-	FVector End = Start + Forward * m_WallJudgmentLength;
 
-	FHitResult HitResult;
+	UWorld* World = CachedCharacter->GetWorld();
+	if (!World)	return false;
+
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(CachedCharacter.Get());
 
-	UWorld* World = CachedCharacter->GetWorld();
-	if (World)
+	for (int32 i = 0; i < NumTraces; ++i)
 	{
+		bool IsLeft = i % 2 == 0;
+		float Angle = (i / 2 + i % 2) * ConeHalfAngleDegrees;
+
+		if (IsLeft) {
+			Angle *= -1;
+		}
+
+		// Z軸で回転
+		FVector TraceDir = Forward.RotateAngleAxis(Angle, FVector::UpVector);
+		FVector End = Start + TraceDir * m_WallJudgmentLength;
+
+		FHitResult HitResult;
 		bool bHit = World->LineTraceSingleByChannel(HitResult, Start, End, ECC_WorldStatic, QueryParams);
 
-		//DrawDebugLine(World, Start, End, FColor::Green, false, 0.1f, 0, 1.0f);
+		 //DrawDebugLine(World, Start, End, FColor::Green, false, 0.1f, 0, 1.0f);
 
 		if (bHit && HitResult.bBlockingHit)
 		{
 			AActor* HitActor = HitResult.GetActor();
+			if (!HitActor)continue;
 
-
-			if (!HitActor)return false;
-
-			// EnemyまたはPlayerタグが付いていたら壁判定を無視（falseを返す）
 			if (HitActor->ActorHasTag(FName("Enemy")) || HitActor->ActorHasTag(FName("Player")))
 			{
-				return false;
+				continue;
 			}
 
-			// 壁のタグがついてるまたはStaticMeshActorであれば壁判定true
 			if (HitActor->ActorHasTag(FName("Wall")) || HitActor->IsA<AStaticMeshActor>())
 			{
 				return true;

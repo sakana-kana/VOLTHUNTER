@@ -25,11 +25,14 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	void SetAIControllerIsActive(const bool _isActive)override;
+
 	//ダメージヒットインターフェース
 	virtual void TakeDamage(const FDamageInfo& _damageInfo)override;
 
-private:
+protected:
+	virtual void UseDamageInformation(const FDamageInfo& _damageInfo)override;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Grunt")
-	float m_Timer;//汎用タイマー
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grunt")
+	bool m_IsTutorialEnemy;
 };

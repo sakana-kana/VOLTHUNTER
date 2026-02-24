@@ -25,14 +25,15 @@ public:
 	//プール生成
 	void CreatePool(const AAttackCollisionFactory* _factory);
 
+	//ハンドル取得
 	FAttackCollisionHandle AcquireHandle();
 
-	
 	//Handle からのみ呼ばれる返却処理
 	void Release(AAttackCollisionDetection* Instance);
 
 	AAttackCollisionDetection* GetInactiveAttackCollision()const;
 
+private:
 	UPROPERTY()
 	TArray<TObjectPtr<AAttackCollisionDetection>> AttackCollisionPool;
 

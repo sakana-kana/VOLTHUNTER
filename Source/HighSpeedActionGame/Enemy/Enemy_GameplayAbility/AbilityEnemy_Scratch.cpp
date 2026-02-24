@@ -40,7 +40,7 @@ void UAbilityEnemy_Scratch::OnMontageEnded() {
 		if (EnemyChar)
 		{
 			// キャラクターのメソッドを呼び出す
-			EnemyChar->OnAttackEnd();
+			//EnemyChar->OnAttackEnd();
 		}
 	}
 }

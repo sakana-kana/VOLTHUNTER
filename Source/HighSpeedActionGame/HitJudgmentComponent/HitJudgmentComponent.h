@@ -26,7 +26,7 @@ public:
 	UHitJudgmentComponent();
 	virtual ~UHitJudgmentComponent();
 	//衝突判定開始
-	void BeginHitDetection(FDamageInfo& _damageinfo, const float _radius, FVector& _relativeLocation, const AActor& _actor, const TArray<FString>& _tag);
+	void BeginHitDetection(FDamageInfo& _damageinfo, const float _radius, FVector& _relativeLocation, const AActor& _actor, const TArray<FString>& _tag,const float _activeTime);
 
 	//衝突可能時間
 	void PossibleHitTime(FVector& _relativeLocation);
@@ -56,7 +56,7 @@ protected:
 	const AActor* m_CollisionDetectionUser;
 
 	//攻撃用衝突判定ハンドル
-	FAttackCollisionHandle CollisionHandle;
+	FAttackCollisionHandle m_CollisionHandle;
 
 public:
 	UPROPERTY(BlueprintAssignable)

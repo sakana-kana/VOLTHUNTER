@@ -7,6 +7,12 @@
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "UObject/ConstructorHelpers.h"
+#include "../PlayerNotifySubSystem/PlayerNotifySubsystem.h"
+#include "Kismet/GameplayStatics.h"
+
+namespace {
+	constexpr float MaxLifeTime = 10.f;//’eŒn‚ÌÅ‘å‚ÌŽõ–½
+}
 
 // Sets default values
 AProjectileBase::AProjectileBase()
@@ -48,6 +54,16 @@ void AProjectileBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+	if (!PC)return;
+
+	ULocalPlayer* LP = PC->GetLocalPlayer();
+	if (!LP)return;
+
+	UPlayerNotifySubsystem* Subsystem = LP->GetSubsystem<UPlayerNotifySubsystem>();
+	if (!Subsystem)return;
+
+	Subsystem->OnPlayerDiedOccurred.AddDynamic(this, &AProjectileBase::HandlePlayerDeath);
 }
 
 
@@ -74,7 +90,7 @@ void AProjectileBase::SetDamageInfo(const FDamageInfo& _damageInfo) {
 	m_DamageInfo = _damageInfo;
 }
 void AProjectileBase::OnCollisionBegin() {
-	m_HitJudgmentComponent->BeginHitDetection(m_DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *this, m_AttackCollisionParam.HitTag);
+	m_HitJudgmentComponent->BeginHitDetection(m_DamageInfo, m_AttackCollisionParam.Radius, m_AttackCollisionParam.RelativeLocation, *this, m_AttackCollisionParam.HitTag, MaxLifeTime);
 	m_HitJudgmentComponent->SetAttackCollisionDetectionVisible(m_AttackCollisionParam.Visible);
 }
 void AProjectileBase::OnCollisionTick() {
@@ -82,4 +98,9 @@ void AProjectileBase::OnCollisionTick() {
 }
 void AProjectileBase::OnCollisionEnd() {
 	m_HitJudgmentComponent->EndHitDetection();
+}
+
+void AProjectileBase::HandlePlayerDeath(AActor* _actor)
+{
+	Destroy();
 }
