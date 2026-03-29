@@ -65,10 +65,8 @@ APlayerCharacter::APlayerCharacter()
 	, m_JumpAction(nullptr)
 	, m_DashAction(nullptr)
 	, m_CameraResetAction(nullptr)
-	, m_TargetLockOnAction(nullptr)
 	, m_AttackLightAction(nullptr)
 	, m_AttackHeavyAction(nullptr)
-	, m_TargetChageAction(nullptr)
 	, m_SkillSelectAction(nullptr)
 	, m_SkillActiveAction(nullptr)
 	, m_JustEvasive_Attacker(nullptr)
@@ -80,6 +78,7 @@ APlayerCharacter::APlayerCharacter()
 	, m_IsHit(false)
 	, m_IsEnhancedAttack(false)
 	, m_IsDebugGodMode(false)
+	, SubElectoroGauge(5.f)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -97,7 +96,7 @@ APlayerCharacter::APlayerCharacter()
 
 	//スプリングアーム設定
 	m_SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	m_SpringArm->SetupAttachment(RootComponent);
+	m_SpringArm->SetupAttachment(GetMesh(), TEXT("Spine2"));
 	m_SpringArm->bUsePawnControlRotation = true;
 	//視点の高さ
 	m_SpringArm->SocketOffset = PlayerParam.CameraSocketOffset;
@@ -108,25 +107,6 @@ APlayerCharacter::APlayerCharacter()
 	m_Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	m_Camera->SetupAttachment(m_SpringArm);
 	m_Camera->bUsePawnControlRotation = false;
-
-	// ロックオン用スプリングアーム
-	m_LockOnSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("LockOnSpringArm"));
-	m_LockOnSpringArm->SetupAttachment(GetCapsuleComponent());
-	m_LockOnSpringArm->TargetArmLength = 350.0f;
-	m_LockOnSpringArm->SetRelativeLocation(FVector(0.0f, -70.0f, 140.0f)); // 少し上にオフセット
-	m_LockOnSpringArm->bEnableCameraLag = true;
-	m_LockOnSpringArm->CameraLagSpeed = 5.0f;
-	m_LockOnSpringArm->bUsePawnControlRotation = false; // ロックオン時は制御しない
-	m_LockOnSpringArm->ProbeChannel = ECC_Visibility;
-
-	//ロックオン用カメラ
-	m_LockOnCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("LockOnCamera"));
-	m_LockOnCamera->SetupAttachment(m_LockOnSpringArm, USpringArmComponent::SocketName);
-	m_LockOnCamera->bUsePawnControlRotation = false;
-	m_LockOnCamera->SetActive(false);
-
-
-
 
 	//AbilitySystemComponentの生成
 	m_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -296,20 +276,6 @@ void APlayerCharacter::Tick(float DeltaTime)
 	CheckJustEvasiveTargetValidity();
 
 	_updateInvincibleDuraction(DeltaTime);
-	//	//デバッグ
-	//	//HPを表示
-	//#if WITH_EDITOR
-	//	if (GEngine)
-	//	{
-	//
-	//		GEngine->AddOnScreenDebugMessage(
-	//			-1,
-	//			0.f,
-	//			FColor::Green,
-	//			FString::Printf(TEXT("HP : %.1f"), m_PlayerHP)
-	//		);
-	//	}
-	//#endif
 }
 
 // 入力バインド
@@ -339,12 +305,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	//カメラリセット
 	EnhancedInput->BindAction(m_CameraResetAction, ETriggerEvent::Started, m_CameraComponent, &UPlayer_CameraComponent::Input_CameraReset);
-
-	//カメラロックオン
-	EnhancedInput->BindAction(m_TargetLockOnAction, ETriggerEvent::Started, m_CameraComponent, &UPlayer_CameraComponent::Input_TargetLockOn);
-
-	//ターゲットを変える
-	EnhancedInput->BindAction(m_TargetChageAction, ETriggerEvent::Started, m_CameraComponent, &UPlayer_CameraComponent::Input_TargetChange);
 
 	//回避スウェイ
 	EnhancedInput->BindAction(m_EvasiveAction, ETriggerEvent::Started, m_EvasiveComponent, &UPlayer_EvasiveComponent::Input_Evasive);
@@ -387,26 +347,6 @@ void APlayerCharacter::OnRespawn()
 
 	OnPlayerRespawnBP();
 
-	////死亡時のメッシュリセット
-	//if (USkeletalMeshComponent* MeshComp = GetMesh())
-	//{
-	//	//物理シュミレーション停止
-	//	MeshComp->SetAllBodiesSimulatePhysics(false);
-	//	MeshComp->SetSimulatePhysics(false);
-
-	//	MeshComp->SetAllUseCCD(false);
-
-	//	MeshComp->SetCollisionProfileName(TEXT("CharacterMesh"));
-	//	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//	MeshComp->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//	MeshComp->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, 0.0f, 0.0f));
-	//}
-	//if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
-	//{
-	//	//コリジョンの無効化
-	//	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//	CapsuleComp->SetCollisionProfileName("Pawn");
-	//}
 
 	//移動復帰
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
@@ -431,7 +371,6 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 {
 	//もし死んでいれば処理されない
 	if (m_IsDie)return;
-
 	//無敵状態であれば処理しない
 	if (m_Invincible)return;
 
@@ -448,6 +387,7 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 		return;
 	}
 
+	//デバッグ中回避は通る
 	if (m_IsDebugGodMode)return;
 
 
@@ -460,7 +400,7 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 		m_CameraComponent->CameraShakEnd();
 	}
 
-
+	//死亡判定
 	if (m_PlayerHP <= 0)
 	{
 		PlayerDying();
@@ -470,10 +410,10 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 	//無敵時間を開始 (連続ヒット防止)
 	m_Invincible = true;
 
-	// 無敵時間の長さ（秒）
+	//無敵時間の長さ（秒）
 	float InvincibleDuration = 1.f;
 
-	// タイマーをセット
+	//無敵タイマーをセット
 	GetWorldTimerManager().SetTimer(
 		m_DamageInvincibleTimerHandle,
 		this,
@@ -483,21 +423,18 @@ void APlayerCharacter::TakeDamage(const FDamageInfo& _damageInfo)
 	);
 
 	//攻撃を受けたらゲージを減らす
-	m_ElectroGaugeComponent->SubtractionElectoroGauge(5.f);
+	m_ElectroGaugeComponent->SubtractionElectoroGauge(SubElectoroGauge);
 
-	//強攻撃で攻撃溜めているときはダメージ食らうがヒットモーションは入らない
-	//if (m_AttackComponent->GetIsHeavyCharging() || m_AttackComponent->GetHeavyAttackStart())return;
-
-	//攻撃を受けたら攻撃リセット
-	m_AttackComponent->ResetAttack();
-	//UE_LOG(LogTemp, Warning, TEXT("HP--"));
-
-	if (m_PlayerHP > 0)
+	if (m_AttackComponent)
 	{
-		if (m_AbilityPlayer_Damage) {
-			m_AbilitySystemComponent->TryActivateAbilityByClass(m_AbilityPlayer_Damage);
-			m_AttackComponent->SetCanAttack(false);
-		}
+		m_AttackComponent->SetCanAttack(false);
+		//攻撃を受けたら攻撃リセット
+		m_AttackComponent->ResetAttack();
+
+	}
+
+	if (m_AbilityPlayer_Damage) {
+		m_AbilitySystemComponent->TryActivateAbilityByClass(m_AbilityPlayer_Damage);
 	}
 
 
@@ -550,35 +487,6 @@ void APlayerCharacter::PlayerDying()
 		GetCharacterMovement()->DisableMovement();
 	}
 
-	//if (USkeletalMeshComponent* MeshComp = GetMesh())
-	//{
-	//	MeshComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-
-	//	MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
-
-	//	//メッシュのコリジョン（物理）を確実に有効化する
-	//	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//	//オブジェクトタイプを物理ボディに設定
-	//	MeshComp->SetCollisionObjectType(ECC_PhysicsBody);
-	//	//地面と動的オブジェクトブロックする
-	//	MeshComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-	//	MeshComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
-	//	
-	//	//CCD(Continuous Collision Detection)をオンにして高速貫通を防ぐ
-	//	MeshComp->SetAllUseCCD(true);
-
-	//	//全てのボーンで物理シュミレーション
-	//	MeshComp->SetAllBodiesSimulatePhysics(true);
-	//	MeshComp->SetSimulatePhysics(true);
-	//	MeshComp->WakeAllRigidBodies();
-	//}
-	//if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
-	//{
-	//	//コリジョンの無効化
-	//	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	//	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
-
-	//}
 
 	// BP に通知
 	OnPlayerDieBP(m_IsFallDie);
@@ -695,10 +603,6 @@ UAbilitySystemComponent* APlayerCharacter::GetAbilitySystemComponent() const {
 	return m_AbilitySystemComponent;
 }
 
-const FPlayerParam& APlayerCharacter::GetPlayerParam() const
-{
-	return PlayerParam;
-}
 
 //地面についたとき
 void APlayerCharacter::Landed(const FHitResult& Hit)
@@ -719,8 +623,6 @@ void APlayerCharacter::Landed(const FHitResult& Hit)
 }
 
 void APlayerCharacter::OnAttackHit(const AActor* _hitActor) {
-	//ヒット時に呼んでほしい処理書く
-	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Hit"));
 	m_IsHit = true;
 
 	if (const AEnemyBase* HitEnemy = Cast<AEnemyBase>(_hitActor))
@@ -803,11 +705,6 @@ void APlayerCharacter::PausePlayer(const bool _isPause) {
 
 void APlayerCharacter::SetIsEnhancedAttack(const bool _EnhancedAttack)
 {
-	//if (m_ElectroGaugeComponent->IsOvercharge())
-	//{
-	//	m_IsEnhancedAttack = !_EnhancedAttack;
-	//	return;
-	//}
 
 	m_IsEnhancedAttack = _EnhancedAttack;
 }
@@ -964,35 +861,29 @@ void APlayerCharacter::Debug_WarpBossEvent()
 void APlayerCharacter::CheckJustEvasiveTargetValidity()
 {
 	// ターゲットがいなければ何もしない
-	if (!m_JustEvasive_Attacker) return;
+	if (!m_JustEvasive_Attacker.IsValid()) return;
 
-	// 敵がDestroyされている（無効）ならリセット
-	if (!IsValid(m_JustEvasive_Attacker))
-	{
-		m_JustEvasive_Attacker = nullptr;
-		return;
-	}
-
+	//ボス戦はターゲット維持
 	if (m_IsBossBattleActive)
 	{
 		return;
 	}
 
-	if (const AEnemyBase* TargetEnemy = Cast<AEnemyBase>(m_JustEvasive_Attacker))
+	const AActor* TargetActor = m_JustEvasive_Attacker.Get();
+
+	if (const AEnemyBase* TargetEnemy = Cast<AEnemyBase>(TargetActor))
 	{
 		if (TargetEnemy->GetIsDying())
 		{
-			UE_LOG(LogTemp, Log, TEXT("Target Lost : Enemy Died"));
 			m_JustEvasive_Attacker = nullptr;
 			return;
 		}
 	}
 
-	const float Distance = GetDistanceTo(m_JustEvasive_Attacker);
-	UE_LOG(LogTemp, Warning, TEXT("Dist: %f / Limit: %f"), Distance, PlayerParam.JustEvasiveTargetKeepDistance);
+	//距離によるターゲット判定
+	const float Distance = GetDistanceTo(TargetActor);
 	if (Distance > PlayerParam.JustEvasiveTargetKeepDistance)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Target Lost! Dist: %f > Limit: %f"), Distance, PlayerParam.JustEvasiveTargetKeepDistance);
 		m_JustEvasive_Attacker = nullptr;
 		return;
 	}

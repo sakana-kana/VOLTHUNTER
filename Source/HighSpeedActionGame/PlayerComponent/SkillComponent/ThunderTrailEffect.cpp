@@ -1,15 +1,14 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "ThunderTrailEffect.h"
 #include "NiagaraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
-// Sets default values
 AThunderTrailEffect::AThunderTrailEffect()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	// プレイヤーの移動が終わった後に位置を更新するため、Tickグループを後ろにする
+	//プレイヤーの移動が終わった後に位置を更新する
+	//Tickグループを「TG_PostUpdateWork」に設定
 	PrimaryActorTick.TickGroup = TG_PostUpdateWork;
 
 	NiagaraComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComp"));
@@ -17,19 +16,19 @@ AThunderTrailEffect::AThunderTrailEffect()
 	NiagaraComp->SetAutoActivate(true);
 }
 
-// Called when the game starts or when spawned
 void AThunderTrailEffect::BeginPlay()
 {
 	Super::BeginPlay();
-	StartLocation = GetActorLocation();
 
+	//生成された瞬間の座標と回転を記録
+	StartLocation = GetActorLocation();
 	FixedRotation = GetActorRotation();
 
+	//エフェクトは水平方向にのみ伸ばす
 	FixedRotation.Pitch = 0.0f;
 	FixedRotation.Roll = 0.0f;
 }
 
-// Called every frame
 void AThunderTrailEffect::Tick(float DeltaTime)
 {
 
@@ -41,13 +40,14 @@ void AThunderTrailEffect::Tick(float DeltaTime)
 		//現在のスケール
 		FVector CurrentScale = GetActorScale3D();
 		
-		float NewThickness = FMath::FInterpTo(CurrentScale.Y, 0.0f, DeltaTime, 10.0f);
+		float NewThickness = FMath::FInterpTo(CurrentScale.Y, 0.0f, DeltaTime, FadeOutInterpSpeed);
 
 		SetActorScale3D(FVector(CurrentScale.X, NewThickness, NewThickness));
 
 		return;
 	}
 
+	//プレイヤーへの追従と伸長処理
 	AActor* Parent = GetAttachParentActor();
 
 	if (Parent)
@@ -62,9 +62,13 @@ void AThunderTrailEffect::Tick(float DeltaTime)
 		//進行方向へ
 		FVector MoveVector = CurrentPlayerPos - StartLocation;
 
+		//エフェクトの正面方向ベクトル
 		FVector ForwardVector = FRotationMatrix(FixedRotation).GetUnitAxis(EAxis::X);
+		
+		//エフェクトの正面方向成分
 		float ForwardDistance = FVector::DotProduct(MoveVector, ForwardVector);
 
+		//後ろに下がった場合マイナススケールで
 		if (ForwardDistance < 0.0f) ForwardDistance = 0.0f;
 
 		//スケール適用
@@ -75,10 +79,14 @@ void AThunderTrailEffect::Tick(float DeltaTime)
 
 void AThunderTrailEffect::BeginFadeOut()
 {
+	if (bIsFinished) return;
+
 	bIsFinished = true;
 
+	//プレイヤーから切り離しその場に残留
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	SetLifeSpan(0.5f);
+	//指定時間後に破棄
+	SetLifeSpan(FadeOutLifeSpan);
 }
 

@@ -20,6 +20,7 @@ UPlayer_ElectroGaugeComponent::UPlayer_ElectroGaugeComponent()
 	, m_DecayAcceleration(3.f)
 	, m_DecayElapsedTime(0.f)
 	, m_IsDecaying(false)
+	, m_ElectroState(EElectroState::Normal)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -66,43 +67,7 @@ void UPlayer_ElectroGaugeComponent::TickComponent(float DeltaTime, ELevelTick Ti
 	}
 	break;
 	}
-	// ...
 
-//	// ===== デバッグ表示 =====
-//#if WITH_EDITOR
-//	if (GEngine)
-//	{
-//		const float GaugeRate = GetGaugeRate();
-//		const int32 BarLength = 20;
-//		const int32 FilledCount = FMath::RoundToInt(GaugeRate * BarLength);
-//
-//		FString Bar;
-//		for (int32 i = 0; i < BarLength; ++i)
-//		{
-//			Bar += (i < FilledCount) ? TEXT("|") : TEXT(".");
-//		}
-//
-//		const FString StateText =
-//			(m_ElectroState == EElectroState::Overcharge)
-//			? TEXT("OVERCHARGE")
-//			: TEXT("Normal");
-//
-//		const FString DebugText = FString::Printf(
-//			TEXT("ElectroGauge [%s]\n[%s]\n%.1f / %.1f\nDelay: %.2f\nDecayTime: %.2f"),
-//			*StateText,
-//			*Bar,
-//			m_CurrentGauge,
-//			m_MaxGauge,
-//			m_LastAddGaugeTime,
-//			m_DecayElapsedTime);
-//
-//		GEngine->AddOnScreenDebugMessage(
-//			(int32)((PTRINT)this), // コンポーネントごとに固定ID
-//			0.f,                   // 毎フレーム更新
-//			FColor::Cyan,
-//			DebugText);
-//	}
-//#endif
 }
 
 void UPlayer_ElectroGaugeComponent::_updateNormalStateDecay(float DeltaTime)
@@ -120,20 +85,21 @@ void UPlayer_ElectroGaugeComponent::_updateNormalStateDecay(float DeltaTime)
 		//最後のゲージ増加からの経過時間
 		m_LastAddGaugeTime += DeltaTime;
 
+		//猶予時間超えたら減少開始
+		if (m_LastAddGaugeTime >= m_DecayStartDelay)
+		{
+			m_IsDecaying = true;
+		}
 	}
 
-	//猶予時間超えたら減少開始
-	if (m_LastAddGaugeTime >= m_DecayStartDelay)
-	{
-		m_IsDecaying = true;
-	}
+
 	//減少中のみ時間を進める
-
 	if (m_IsDecaying)
 	{
-
+		//減少中
 		m_DecayElapsedTime += DeltaTime;
 		const float AcceleratedDacayRate = m_NormalDecayRate + m_DecayElapsedTime * m_DecayAcceleration;
+		//ゲージを減らす
 		m_CurrentGauge = FMath::Clamp(m_CurrentGauge - AcceleratedDacayRate * DeltaTime, 0.f, m_MaxGauge);
 
 	}
@@ -144,6 +110,7 @@ void UPlayer_ElectroGaugeComponent::_updateOverchargeStateDecay(float DeltaTime)
 {
 	m_CurrentGauge -= m_OverChargeDecayRate * DeltaTime;
 
+	//ゲージがなくなったら通常状態に戻る
 	if (m_CurrentGauge <= 0.f)
 	{
 		ExitOvercharge();
@@ -153,11 +120,10 @@ void UPlayer_ElectroGaugeComponent::_updateOverchargeStateDecay(float DeltaTime)
 
 void UPlayer_ElectroGaugeComponent::DebugOverCharge()
 {
-	// ゲージが空だとTickですぐ終了してしまうため、最大まで埋める
+	//ゲージが空だとTickですぐ終了してしまうため、最大まで埋める
 	m_CurrentGauge = m_MaxGauge;
 
-	// 既存のオーバーチャージ突入処理を呼ぶ
-	// (ステート変更、Niagara再生などはここで行われる)
+	//既存のオーバーチャージ突入処理を呼ぶ
 	EnterOvercharge();
 }
 
@@ -199,7 +165,7 @@ void UPlayer_ElectroGaugeComponent::AddElectroGauge(float Value)
 
 void UPlayer_ElectroGaugeComponent::SubtractionElectoroGauge(float Value)
 {
-	//超帯電中は加算しない
+	//超帯電中はダメージ等によるゲージ減少を30%カット（軽減）する
 	if (m_ElectroState == EElectroState::Overcharge)
 	{
 		Value *= 0.7f;
@@ -230,7 +196,6 @@ void UPlayer_ElectroGaugeComponent::EnterOvercharge()
 		return;
 	}
 	m_ElectroState = EElectroState::Overcharge;
-	//m_Player->SetIsEnhancedAttack(true);
 
 	if (!m_OverchargeEffect || !GetOwner())return;
 
@@ -241,11 +206,11 @@ void UPlayer_ElectroGaugeComponent::EnterOvercharge()
 			UNiagaraFunctionLibrary::SpawnSystemAttached(
 				m_OverchargeEffect,
 				GetOwner()->GetRootComponent(),
-				NAME_None,                // ソケットは BP 側
+				NAME_None,                //ソケットは BP 側
 				FVector(0.f, 0.f, -100.f),
 				FRotator::ZeroRotator,
 				EAttachLocation::KeepRelativeOffset,
-				false                     // AutoDestroy = false
+				false                     //AutoDestroy = false
 			);
 	}
 	else
@@ -263,7 +228,6 @@ void UPlayer_ElectroGaugeComponent::ExitOvercharge()
 	m_ElectroState = EElectroState::Normal;
 	m_CurrentGauge = 0.f;
 
-	//m_Player->SetIsEnhancedAttack(false);
 
 	// === Niagara OFF ===
 	if (m_OverchargeEffectComp)
@@ -285,5 +249,8 @@ void UPlayer_ElectroGaugeComponent::ResetGauge()
 	{
 		ExitOvercharge();
 	}
-	m_ElectroState = EElectroState::Normal;
+	else
+	{
+		m_ElectroState = EElectroState::Normal;
+	}
 }

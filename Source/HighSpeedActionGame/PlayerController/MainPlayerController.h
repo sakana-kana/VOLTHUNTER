@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//インゲーム内でコントローラーを管理するクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -44,6 +46,7 @@ private:
 	void SetInputModeState(EPlayerInputMode NewMode);
 
 protected:
+	//入力コールバック
 	void ResultDecision(const FInputActionValue& Value);
 	void ResultMoveUp(const FInputActionValue& Value);
 	void ResultMoveDown(const FInputActionValue& Value);

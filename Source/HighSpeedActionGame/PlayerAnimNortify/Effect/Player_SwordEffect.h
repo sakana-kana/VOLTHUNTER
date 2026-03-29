@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//剣のトレイルクラス
+
 #pragma once
 
 #include "CoreMinimal.h"

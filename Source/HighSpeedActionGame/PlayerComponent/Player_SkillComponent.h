@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//スキルクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -67,6 +69,7 @@ public:
 	bool CheckCurrentSkillUsable() const;
 
 public:
+	//スキル使用可能状態が変化した際
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnSkillUsableChanged OnSkillUsableChanged;
 protected:
@@ -82,8 +85,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Component")
 	UPlayer_ElectroGaugeComponent* m_ElectroGaugeComponent;
 
-	//UPROPERTY()
-	//UPostProcess* m_PostProcessActor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|UI")
 	TSubclassOf<UUserWidget> SkillHitUIClass;

@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "../Widget/TitleModeSelectWidge.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "../Widget/SettingsWidget.h"
 
 namespace {
 	constexpr int8 MaxMenuWindowNum = 3;
@@ -46,15 +47,27 @@ void ATitlePlayerController::SetupInputComponent() {
 
 	UEnhancedInputComponent* EIComp = CastChecked<UEnhancedInputComponent>(InputComponent);
 
-	EIComp->BindAction(m_DecisionAction, ETriggerEvent::Triggered, this, &ATitlePlayerController::DecisionAction);
-	EIComp->BindAction(m_ReturnAction, ETriggerEvent::Triggered, this, &ATitlePlayerController::ReturnAction);
+	EIComp->BindAction(m_DecisionAction, ETriggerEvent::Started, this, &ATitlePlayerController::DecisionAction);
+	EIComp->BindAction(m_ReturnAction, ETriggerEvent::Started, this, &ATitlePlayerController::ReturnAction);
 	EIComp->BindAction(m_MoveUpSelectionAction, ETriggerEvent::Started, this, &ATitlePlayerController::MoveUpSelection);
 	EIComp->BindAction(m_MoveDownSelectionAction, ETriggerEvent::Started, this, &ATitlePlayerController::MoveDownSelection);
+	EIComp->BindAction(m_MoveRightSelectionAction, ETriggerEvent::Triggered, this, &ATitlePlayerController::MoveRightSelection);
+	EIComp->BindAction(m_MoveLeftSelectionAction, ETriggerEvent::Triggered, this, &ATitlePlayerController::MoveLeftSelection);
 
+	EIComp->BindAction(m_MoveRightSelectionAction, ETriggerEvent::Completed, this, &ATitlePlayerController::ResetSettingInput);
+	EIComp->BindAction(m_MoveLeftSelectionAction, ETriggerEvent::Completed, this, &ATitlePlayerController::ResetSettingInput);
 }
 
 void ATitlePlayerController::DecisionAction(const FInputActionValue& Value)
 {
+	if (m_IsSettingOpen && SettingsWidget) {
+		//アニメーション中は操作させない
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+
+		//決定ボタンの処理を設定ウィジェットに伝える
+		SettingsWidget->DecisionCurrentSetting();
+		return;
+	}
 	if (ModeSelectWidget) {
 		if (!ModeSelectWidget->GetIsAnimationPlaying() && !IsModeSelectOpen) {
 			ETitleMenuInputType Type = ETitleMenuInputType::Decision;
@@ -69,14 +82,49 @@ void ATitlePlayerController::DecisionAction(const FInputActionValue& Value)
 			}
 		}
 		else if (!ModeSelectWidget->GetIsAnimationPlaying() && IsModeSelectOpen) {
-			if (!LevelAssetToLoad[m_CurrentIndex].IsNull()) {
-				UGameplayStatics::OpenLevelBySoftObjectPtr(this, LevelAssetToLoad[m_CurrentIndex]);
+			if (m_CurrentIndex == 2)
+			{
+				if (SettingsWidgetClass)
+				{
+					if (!SettingsWidget)
+					{
+						SettingsWidget = CreateWidget<USettingsWidget>(this, SettingsWidgetClass);
+						//アニメーションの終了通知
+						SettingsWidget->OnSettingsClosedDelegate.AddDynamic(this, &ATitlePlayerController::OnSettingsWidgetClosed);
+					}
+					if (SettingsWidget && !SettingsWidget->IsInViewport()) {
+						SettingsWidget->AddToViewport();
+						m_IsSettingOpen = true; 
+
+						
+						FInputModeGameAndUI InputMode;
+						InputMode.SetWidgetToFocus(SettingsWidget->TakeWidget());
+						SetInputMode(InputMode);
+
+						//アニメーション開始
+						SettingsWidget->PlayOpenAnimation();
+					}
+				}
+			}
+			
+			else if (m_CurrentIndex == 0 || m_CurrentIndex == 1) {
+				if (!LevelAssetToLoad[m_CurrentIndex].IsNull()) {
+					UGameplayStatics::OpenLevelBySoftObjectPtr(this, LevelAssetToLoad[m_CurrentIndex]);
+				}
 			}
 		}
 	}
 }
 
 void ATitlePlayerController::ReturnAction(const FInputActionValue& Value) {
+	//設定画面が開いていれば閉じる
+	if (m_IsSettingOpen && SettingsWidget)
+	{
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+		SettingsWidget->PlayCloseAnimation();
+		return;
+	}
+	
 	if (ModeSelectWidget) {
 		if (!ModeSelectWidget->GetIsAnimationPlaying() && IsModeSelectOpen) {
 			ETitleMenuInputType Type = ETitleMenuInputType::Cancel;
@@ -88,6 +136,12 @@ void ATitlePlayerController::ReturnAction(const FInputActionValue& Value) {
 }
 
 void ATitlePlayerController::MoveUpSelection(const FInputActionValue& Value) {
+	if (m_IsSettingOpen && SettingsWidget) {
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+		SettingsWidget->ChangeSelection(-1);
+		return;
+	}
+	
 	if (!IsModeSelectOpen && ModeSelectWidget->GetIsAnimationPlaying())return;
 
 	--m_CurrentIndex;
@@ -100,6 +154,12 @@ void ATitlePlayerController::MoveUpSelection(const FInputActionValue& Value) {
 
 }
 void ATitlePlayerController::MoveDownSelection(const FInputActionValue& Value) {
+	if (m_IsSettingOpen && SettingsWidget) {
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+		SettingsWidget->ChangeSelection(1);
+		return;
+	}
+	
 	if (!IsModeSelectOpen && ModeSelectWidget->GetIsAnimationPlaying())return;
 
 	++m_CurrentIndex;
@@ -109,4 +169,39 @@ void ATitlePlayerController::MoveDownSelection(const FInputActionValue& Value) {
 	ETitleMenuInputType Type = ETitleMenuInputType::MoveDownSelection;
 	ModeSelectWidget->NotifyInput(Type, m_CurrentIndex);
 
+}
+
+void ATitlePlayerController::MoveRightSelection(const FInputActionValue& Value)
+{
+	if (m_IsSettingOpen && SettingsWidget) {
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+		SettingsWidget->ChangeValue(1.0f, GetWorld()->GetDeltaSeconds());
+	}
+}
+
+void ATitlePlayerController::MoveLeftSelection(const FInputActionValue& Value)
+{
+	if (m_IsSettingOpen && SettingsWidget) {
+		if (SettingsWidget->GetIsAnimationPlaying()) return;
+		SettingsWidget->ChangeValue(-1.0f, GetWorld()->GetDeltaSeconds());
+	}
+}
+
+void ATitlePlayerController::ResetSettingInput(const FInputActionValue& Value)
+{
+	if (m_IsSettingOpen && SettingsWidget) {
+		SettingsWidget->ResetInputState();
+	}
+}
+
+void ATitlePlayerController::OnSettingsWidgetClosed()
+{
+	if (SettingsWidget)
+	{
+		SettingsWidget->RemoveFromParent();
+	}
+	m_IsSettingOpen = false;
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
 }

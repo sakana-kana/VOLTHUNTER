@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//空中攻撃モーションGASクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -17,18 +19,11 @@ class HIGHSPEEDACTIONGAME_API UAbilityPlayer_AirAttackLight1 : public UAbilityPl
 {
 	GENERATED_BODY()
 	
-	//UAbilityPlayer_AirAttackLight1();
-
-	//virtual void InitializeTags()override;
-
-    //
     virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
 
-    // 
-  
     virtual void OnMontageEnded()override;
 
 

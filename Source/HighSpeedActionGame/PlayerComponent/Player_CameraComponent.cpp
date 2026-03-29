@@ -7,6 +7,7 @@
 #include "Player_EvasiveComponent.h"
 #include "../PlayerCharacter.h"
 #include "../Event/GameplayAreaEventManager/GameplayAreaEventManager.h"
+#include "../SequenceWorldSubsystem/SequenceWorldSubsystem.h"
 #include "../Enemy/EnemyBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -16,6 +17,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"   
 #include "Kismet/KismetMathLibrary.h"
+#include "../PlayerSettingsSubsystem/PlayerSettingsSubsystem.h"
 
 
 
@@ -24,7 +26,6 @@ UPlayer_CameraComponent::UPlayer_CameraComponent()
 	:m_Player(nullptr)
 	, m_EnemyDirectionInterpSpeed(15.f)
 	, m_IsEnemyDirectionLooking(false)
-	, m_IsTargetLockOn(false)
 	, m_MinPitch(-50.f)
 	, m_MaxPitch(20.f)
 	, m_LastCamerainputTime(0.f)
@@ -56,20 +57,29 @@ void UPlayer_CameraComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld()))
+	{
+		if (UPlayerSettingsSubsystem* SettingsSubsystem = GameInstance->GetSubsystem<UPlayerSettingsSubsystem>())
+		{
+			//サブシステムに保存されているスライダーの値をそのまま代入！
+			PlayerParam.CameraSensitivity = SettingsSubsystem->GetCameraSensitivity();
+
+			//リバース設定
+			m_bInvertCameraX = SettingsSubsystem->GetInvertCameraX();
+			m_bInvertCameraY = SettingsSubsystem->GetInvertCameraY();
+		}
+	}
+
 	m_Player = Cast<APlayerCharacter>(GetOwner());
 	if (!m_Player)		return;
 
 	m_MovementComponent = m_Player->FindComponentByClass<UPlayer_MovementComponent>();
-	if (!m_MovementComponent)return;
 
 	m_AttackComponent = m_Player->FindComponentByClass<UPlayer_AttackComponent>();
-	if (!m_AttackComponent)return;
 
 	m_EvasiveComponent = m_Player->FindComponentByClass<UPlayer_EvasiveComponent>();
-	if (!m_EvasiveComponent)return;
 
 	m_PlayerController = Cast<APlayerController>(m_Player->GetController());
-	if (!m_PlayerController.IsValid())return;
 
 
 	// Player の Root として Capsule を使用
@@ -78,12 +88,13 @@ void UPlayer_CameraComponent::BeginPlay()
 
 	m_SpringArm = m_Player->m_SpringArm;
 	m_Camera = m_Player->m_Camera;
-	m_LockOnSpringArm = m_Player->m_LockOnSpringArm;
-	m_LockOnCamera = m_Player->m_LockOnCamera;
 
-	//Blueprint適用後の最終値の設定
-	//カメラ距離
-	m_SpringArm->TargetArmLength = PlayerParam.CameraLength;
+	if (m_SpringArm)
+	{
+		m_SpringArm->TargetArmLength = PlayerParam.CameraLength;
+		m_DefaultSocketOffset = m_SpringArm->SocketOffset;
+		m_TargetSocketOffset = m_DefaultSocketOffset;
+	}
 
 	m_CameraFocusLocation = m_Player->GetActorLocation();
 	m_CameraFocusVelocity = FVector::ZeroVector;
@@ -98,19 +109,18 @@ void UPlayer_CameraComponent::BeginPlay()
 	{
 		OpeningHandler->Initialize(m_SpringArm, m_Camera, m_PlayerController.Get());
 	}
-	m_IsOpeningCamera = false;
-
+	//DieHandlerの初期化
 	if (DieHandler)
 	{
-		DieHandler->Initialize(m_SpringArm,m_PlayerController.Get());
+		DieHandler->Initialize(m_SpringArm, m_PlayerController.Get());
+	}
+	//ボスHandlerの初期化
+	if (BossHandler)
+	{
+		BossHandler->Initialize(m_SpringArm, m_Camera);
 	}
 
-
-	//LockOnHandler = NewObject<UCameraLockOnHandler>(this);
-	//if (LockOnHandler) {
-
-	//	LockOnHandler->Initialize(this, m_Player, m_PlayerController.Get(), m_SpringArm, m_Camera, m_LockOnSpringArm, m_LockOnCamera);
-	//}
+	m_IsOpeningCamera = false;
 
 
 	// ActionHandler生成
@@ -123,29 +133,22 @@ void UPlayer_CameraComponent::BeginPlay()
 		// パラメータをコピー（BPで設定した値をハンドラに渡す）
 		ActionHandler->SetupParams(PlayerParam.CameraLength, PlayerParam.DefaultFOV, PlayerParam.DashStartArmLength, PlayerParam.DashStartFOV, PlayerParam.DashMidArmLength, PlayerParam.DashMidFOV);
 	}
-	if (BossHandler)
-	{
-		BossHandler->Initialize(m_SpringArm, m_Camera);
-	}
 
 	if (UWorld* World = GetWorld())
 	{
 		// サブシステム取得
 		if (UGameplayAreaEventManager* EventManager = World->GetSubsystem<UGameplayAreaEventManager>())
 		{
-			// AddUObject で関数を紐づける
-			EventManager->OnBossActive.AddDynamic(this, &UPlayer_CameraComponent::OnBossBattleStart);
-
 			// 死亡時（終了時）もバインドしておく
 			EventManager->OnBossDead.AddDynamic(this, &UPlayer_CameraComponent::OnBossBattleEnd);
 		}
+
+		if (USequenceWorldSubsystem* SequenceSub = World->GetSubsystem<USequenceWorldSubsystem>())
+		{
+			SequenceSub->OnBossSequenceFinished.AddDynamic(this, &UPlayer_CameraComponent::OnBossBattleStart);
+		}
 	}
 
-	if (m_SpringArm)
-	{
-		m_DefaultSocketOffset = m_SpringArm->SocketOffset;
-		m_TargetSocketOffset = m_DefaultSocketOffset;
-	}
 }
 
 // Called every frame
@@ -201,7 +204,7 @@ void UPlayer_CameraComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	_updateEnemyDirectionCamera(DeltaTime);
 
 
-	if (!m_IsTargetLockOn && !m_IsClearCamera)
+	if (!m_IsClearCamera)
 	{
 		_updateCameraFocus(DeltaTime);
 		m_SpringArm->SetWorldLocation(m_CameraFocusLocation);
@@ -213,15 +216,6 @@ void UPlayer_CameraComponent::TickComponent(float DeltaTime, ELevelTick TickType
 
 		return;
 	}
-
-	// ロックオン処理（Handlerに丸投げ）
-	//if (m_IsTargetLockOn)
-	//{
-	//	if (LockOnHandler)
-	//	{
-	//		LockOnHandler->UpdateLockOn(DeltaTime);
-	//	}
-	//}
 
 	bool bIsSkillActive = (m_SkillCameraPhase != ESkillCameraPhase::None);
 
@@ -250,9 +244,7 @@ void UPlayer_CameraComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		return;
 	}
 
-	//_updateDashCamera(DeltaTime);
 
-	_updateAutoCameraReturn(DeltaTime);
 
 	if (m_SpringArm)
 	{
@@ -289,47 +281,10 @@ void UPlayer_CameraComponent::_updateCameraFocus(float DeltaTime)
 }
 
 
-
-
-//カメラが一定時間たつと自動で戻る
-void UPlayer_CameraComponent::_updateAutoCameraReturn(float DeltaTime)
-{
-	//if (!m_PlayerController.IsValid())return;
-	////ロックオン中は戻さない
-	//if (m_IsTargetLockOn)return;
-
-	////攻撃中は戻らない
-	//if (m_AttackComponent->GetIsAttack() || m_AttackComponent->GetIsAirAttackStart())return;
-
-	////後ろ向きの入力の時は戻らない
-	//if (m_MovementComponent->GetCurrentMoveInput().X < -0.1)return;
-
-	////現在の経過時間
-	//float CurrentTime = GetWorld()->GetTimeSeconds();
-
-	////入力が最近あったら戻さない
-	//if (CurrentTime - m_LastCamerainputTime < m_CameraAutoDelay) return;
-
-	////戻したい位置
-	//FRotator TargetRotation = m_Player->GetActorRotation();
-	//TargetRotation.Pitch = -15.f;
-	//TargetRotation.Roll = 0.f;
-
-	//FRotator CurrentRotation = m_PlayerController->GetControlRotation();
-
-	////回転を滑らかに補間 
-	////現在の回転値 から 目的の回転値 へ 補間速度　で行く
-	//FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, m_CameraReturnSpeed);
-
-	////視点回転をセット
-	//m_PlayerController->SetControlRotation(NewRotation);
-}
-
-
 //敵の方向へカメラを向ける
 void UPlayer_CameraComponent::_updateEnemyDirectionCamera(float DeltaTime)
 {
-	if (!m_IsEnemyDirectionLooking || !m_EnemyTarget) return;
+	if (!m_IsEnemyDirectionLooking || !m_EnemyTarget.IsValid()) return;
 
 	//カメラ入力ある場合は自動回転しない
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
@@ -345,15 +300,6 @@ void UPlayer_CameraComponent::_updateEnemyDirectionCamera(float DeltaTime)
 	TargetLocation.Z = m_Player->GetActorLocation().Z;
 
 	FRotator TargetRotation = (TargetLocation - CamLocation).Rotation();
-	//if (m_IsLowAngleMode)
-	//{
-	//	TargetRotation.Pitch = m_JustEvasivePitch;
-	//}
-	//else
-	//{
-	//	TargetRotation.Pitch = m_NormalLockPitch;
-	//}
-
 	FRotator NewRotation = FMath::RInterpTo(
 		m_PlayerController->GetControlRotation(),
 		TargetRotation,
@@ -441,11 +387,6 @@ void UPlayer_CameraComponent::EndSkillCamera()
 //ロックオン解除
 void UPlayer_CameraComponent::CancellationLockOn()
 {
-	//// Handlerに強制解除指示
-	//if (LockOnHandler)
-	//{
-	//	LockOnHandler->CancelLockOn();
-	//}
 }
 
 void UPlayer_CameraComponent::CameraShakEnd()
@@ -493,6 +434,10 @@ void UPlayer_CameraComponent::Input_CameraRotatePitch(const FInputActionValue& V
 	float PitchAxis = Value.Get<float>();
 	if (FMath::IsNearlyZero(PitchAxis))return;
 
+	if (m_bInvertCameraY) {
+		PitchAxis *= -1.0f;
+	}
+
 	//経過時間
 	m_LastCamerainputTime = GetWorld()->GetTimeSeconds();
 
@@ -518,6 +463,10 @@ void UPlayer_CameraComponent::Input_CameraRotateYaw(const FInputActionValue& Val
 	//入力値
 	float YawAxis = Value.Get<float>();
 	if (FMath::IsNearlyZero(YawAxis))return;
+
+	if (m_bInvertCameraX) {
+		YawAxis *= -1.0f;
+	}
 
 	//経過時間
 	m_LastCamerainputTime = GetWorld()->GetTimeSeconds();
@@ -557,27 +506,6 @@ void UPlayer_CameraComponent::Input_CameraReset(const FInputActionValue& Value)
 		{
 			MoveComponent->bOrientRotationToMovement = bPrevOrient;
 		}, 0.1f, false);
-}
-
-
-//カメラロックオン
-void UPlayer_CameraComponent::Input_TargetLockOn(const FInputActionValue& Value)
-{
-	//if (m_IsClearCamera) return;
-	//if (LockOnHandler)
-	//{
-	//	LockOnHandler->ToggleLockOn();
-	//}
-}
-
-//ターゲットを変える
-void UPlayer_CameraComponent::Input_TargetChange(const FInputActionValue& Value)
-{
-	//if (m_IsClearCamera) return;
-	//if (LockOnHandler)
-	//{
-	//	LockOnHandler->ChangeTarget();
-	//}
 }
 
 
@@ -742,7 +670,7 @@ float UPlayer_CameraComponent::GetCameraFollowTime() const
 {
 	if (m_MovementComponent->GetIsDash())
 	{
-		return 0.1;
+		return 0.1f;
 	}
 	if (m_EvasiveComponent->GetIsEvasive())
 	{
@@ -796,8 +724,8 @@ void UPlayer_CameraComponent::ResetCamera()
 		m_SpringArm->SocketOffset = PlayerParam.CameraSocketOffset;
 
 		m_SpringArm->bInheritPitch = true;
-		m_SpringArm->bInheritYaw   = true;
-		m_SpringArm->bInheritRoll  = true;
+		m_SpringArm->bInheritYaw = true;
+		m_SpringArm->bInheritRoll = true;
 	}
 
 	// ===== ControlRotation を Actor 基準に再同期 =====

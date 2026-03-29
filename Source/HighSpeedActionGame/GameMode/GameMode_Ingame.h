@@ -1,5 +1,7 @@
-//佐々木奏太担当
+//担当　佐々木奏太・伊藤直樹
 //インゲーム用のゲームモード
+
+
 
 #pragma once
 
@@ -26,18 +28,16 @@ public:
 
 	//プレイヤー復帰
 	void RespawnPlayer(APlayerCharacter* Player);
-
 	//復帰地点更新
 	void SetRespawnTransform(const FTransform& NewTransform);
-
 	void RequestRespawn(APlayerCharacter* Player);
 
+	//ボス戦開始
 	UFUNCTION()
 	void OnBossBattleStart();
-
+	//クリア時
 	UFUNCTION()
 	void OnGameClear();
-
 	UFUNCTION()
 	void PlayBossSequenceIfAvailable();
 
@@ -71,6 +71,9 @@ protected:
 	TObjectPtr<UMediaSource> m_MediaSource;
 
 protected:
+	//BGM管理コンポーネント
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BGM")
 	UGameBGMComponent* BGMManager;
+
+	float RespawnWaitTime = 5.0f;
 };

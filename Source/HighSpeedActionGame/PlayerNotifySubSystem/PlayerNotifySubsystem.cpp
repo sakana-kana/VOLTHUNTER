@@ -5,7 +5,6 @@
 
 void UPlayerNotifySubsystem::NotifyJustEvasive(const AActor* Attacker)
 {
-	UE_LOG(LogTemp, Log, TEXT("Subsystem: Just Evasive Notification Received!"));
 
 	if (OnJustEvasiveOccurred.IsBound())
 	{
@@ -24,7 +23,6 @@ void UPlayerNotifySubsystem::NotifyPlayerDying(AActor* DyingActor)
 
 void UPlayerNotifySubsystem::NotifyPlayerDied(AActor* DeadActor)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Subsystem: Player Died Notification Received!"));
 
 	if (OnPlayerDiedOccurred.IsBound())
 	{

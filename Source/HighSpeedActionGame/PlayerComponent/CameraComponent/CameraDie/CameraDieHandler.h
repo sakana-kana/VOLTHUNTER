@@ -1,4 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当
+//伊藤直樹
+
+//死亡時のカメラハンドラー
 
 #pragma once
 
@@ -29,11 +32,9 @@ public:
 	void EndDieCamera();
 private:
 	UPROPERTY()
-	USpringArmComponent* SpringArm;
-
+	TWeakObjectPtr<USpringArmComponent> m_SpringArm;
 	UPROPERTY()
-	APlayerController* PlayerController;
-
+	TWeakObjectPtr<APlayerController> m_PlayerController;
 	bool m_IsActive;
 
 	// 最終的なアームの長さ
@@ -41,8 +42,9 @@ private:
 protected:
 	//死亡時に追加で引く
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DieCamera")
-	float m_DieZoomOutDistance = 150.f;
+	float m_DieZoomOutDistance = 250.f;
 	
+	//死亡時の見下ろし角度
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DieCamera")
 	float m_TargetPitch = -50.0f;
 

@@ -17,7 +17,7 @@ void UAnimCameraSet_NotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, U
 			//値を渡してオーバーライド
 			//ArmLength,FOVを使わない場合無視
 			float SendArmLength = bEnableArmLength ? TargetArmLength : -1.0f;
-			float SendFOV = bEnableArmLength ? TargetFOV : -1.0f;
+			float SendFOV = bEnableFOV ? TargetFOV : -1.0f;
 
 			CameraComp->StartAnimCameraOverride(SendArmLength, SendFOV, InterpSpeed);
 		}

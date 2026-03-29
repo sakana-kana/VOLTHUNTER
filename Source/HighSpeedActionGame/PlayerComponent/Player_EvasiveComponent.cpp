@@ -77,25 +77,12 @@ void UPlayer_EvasiveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	////回避ストック
-	//FString DebugMsg = FString::Printf(
-	//	TEXT("Stock: %d / %d   |   Recovery: %.2f / %.2f"),
-	//	m_CurrentEvasiveStock,
-	//	PlayerParam.EvasiveStock,
-	//	m_CurrentEvasiveRecoveryTime,
-	//	PlayerParam.EvasiveRecoveryTime
-	//);
-
-	//GEngine->AddOnScreenDebugMessage(
-	//	1,               // 固定ID（上書き表示）
-	//	0.f,             // 0秒 → 毎フレーム上書きされる
-	//	FColor::Cyan,
-	//	DebugMsg
-	//);
 
 	//状態を更新
 	_updateEvasive(DeltaTime);
 
+	//スローモーション安全装置
+	//時間が戻らなくなった時
 	float CurrentTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
 
 	if (CurrentTimeDilation < 0.95f && CurrentTimeDilation > 0.05f)
@@ -118,7 +105,9 @@ void UPlayer_EvasiveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 			m_CurrentSlowMotionWatchTime = 0.f;
 
-			UE_LOG(LogTemp, Warning, TEXT("TimeDilation was stuck! Force reset to 1.0f."));
+#if !UE_BUILD_SHIPPING
+			UE_LOG(LogTemp, Error, TEXT("TimeDilation was stuck! Force reset to 1.0f by Fail-Safe."));
+#endif
 		}
 	}
 	else
@@ -132,51 +121,28 @@ void UPlayer_EvasiveComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 //回避スウェイ
 void UPlayer_EvasiveComponent::_updateEvasive(float DeltaTime)
 {
-	////回避中の処理
-	//if (m_IsEvasive) {
 
-	//	m_EvasiveTime += DeltaTime;
+	if (!m_IsJustEvasive)return;
+	m_CurrentJustEvasiveTime += DeltaTime;
 
-	//	//回避時間終了
-	//	if (m_EvasiveTime >= PlayerParam.FinishEvasiveTime)
-	//	{
-	//		m_IsEvasive = false;
-	//	}
-	//}
-
-	if (m_IsJustEvasive)
+	//ジャスト回避の無敵、強化時間が過ぎたらリセット
+	if (m_CurrentJustEvasiveTime >= m_JustEvasiveLimitTime)
 	{
-		m_CurrentJustEvasiveTime += DeltaTime;
+		m_IsJustEvasive = false;
+		m_CurrentJustEvasiveTime = 0.f;
 
-		if (m_CurrentJustEvasiveTime >= m_JustEvasiveLimitTime)
+		if (m_Player)
 		{
-			m_IsJustEvasive = false;
-			m_CurrentJustEvasiveTime = 0.f;
-
 			m_Player->SetInvincible(false);
-
-			HideJustEvasiveUI();
-			if (m_SkillComponent)
-			{
-				m_SkillComponent->SetCanSkillActive(true);
-			}
-
 		}
+
+		HideJustEvasiveUI();
+		if (m_SkillComponent)
+		{
+			m_SkillComponent->SetCanSkillActive(true);
+		}
+
 	}
-
-	////ストック回復
-	//if (m_CurrentEvasiveStock < PlayerParam.EvasiveStock)
-	//{
-	//	m_CurrentEvasiveRecoveryTime += DeltaTime;
-
-	//	//現在の回復具合
-	//	if (m_CurrentEvasiveRecoveryTime >= PlayerParam.EvasiveRecoveryTime)
-	//	{
-	//		//ストック回復
-	//		m_CurrentEvasiveStock++;
-	//		m_CurrentEvasiveRecoveryTime = 0.f;
-	//	}
-	//}
 }
 
 //回避スウェイ入力
@@ -184,8 +150,6 @@ void UPlayer_EvasiveComponent::Input_Evasive(const FInputActionValue& Value)
 {
 	if (m_IsEvasive)return;
 
-	////回避ストックがない場合回避不可
-	//if (m_CurrentEvasiveStock <= 0)return;
 
 	//空中
 	if (!m_Player->GetCharacterMovement()->IsMovingOnGround())
@@ -212,8 +176,6 @@ void UPlayer_EvasiveComponent::Input_Evasive(const FInputActionValue& Value)
 		m_MovementComponent->EndDash();
 	}
 	m_MovementComponent->SetCanMovement(false);
-	////使用したらストック消費
-	//m_CurrentEvasiveStock--;
 
 	m_IsEvasive = true;
 	m_EvasiveTime = 0.f;
@@ -222,19 +184,7 @@ void UPlayer_EvasiveComponent::Input_Evasive(const FInputActionValue& Value)
 	m_SkillComponent->SetCanSkillActive(false);
 
 	//回避方向
-	FRotator EvasiveRotation;
-	//ロックオン中
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		//ロックオンカメラの水平方向
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-		EvasiveRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	//通常時
-	else
-	{
-		EvasiveRotation = m_MovementComponent->GetControlRotationFlat();
-	}
+	FRotator EvasiveRotation = EvasiveRotation = m_MovementComponent->GetControlRotationFlat();
 
 	m_Player->DeleteCollision();
 
@@ -339,9 +289,6 @@ void UPlayer_EvasiveComponent::OnJustEvasiveOverlap(UPrimitiveComponent* Overlap
 		m_Player->SetInvincible(true);
 		m_Player->SetIsEnhancedAttack(true);
 
-
-		UE_LOG(LogTemp, Warning, TEXT("EvasiveCollisionkasanatta"));
-
 		if (JustEvasiveWidgetClass && m_Player->GetController())
 		{
 			//既に表示されていたら一旦消す
@@ -385,6 +332,7 @@ void UPlayer_EvasiveComponent::OnJustEvasiveOverlap(UPrimitiveComponent* Overlap
 		OnJustEvasiveSuccess();
 
 		if (!IsValid(m_Player->GetJustEvasive_Attacker()))return;
+
 		m_MovementComponent->OnJustEvasive(m_Player->GetJustEvasive_Attacker());
 		m_CameraComponent->OnJEnemyDirection(m_Player->GetJustEvasive_Attacker(), true);
 

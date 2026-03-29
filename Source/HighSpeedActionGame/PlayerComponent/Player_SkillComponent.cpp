@@ -11,8 +11,10 @@
 #include "Blueprint/UserWidget.h"
 #include "../PlayerCharacter.h"
 
-//#include "../PostProcess/PostProcess.h"
-
+namespace SkillConstants
+{
+	constexpr float SelectInputThreshold = 0.5f; //スキル選択のスティック入力しきい値
+}
 // Sets default values for this component's properties
 UPlayer_SkillComponent::UPlayer_SkillComponent()
 	:m_Player(nullptr)
@@ -50,16 +52,10 @@ void UPlayer_SkillComponent::BeginPlay()
 	if (!m_Player)return;
 
 	m_MovementComponent = m_Player->FindComponentByClass<UPlayer_MovementComponent>();
-	if (!m_MovementComponent)return;
 
 	m_AttackComponent = m_Player->FindComponentByClass<UPlayer_AttackComponent>();
-	if (!m_AttackComponent)return;
 
 	m_ElectroGaugeComponent = m_Player->FindComponentByClass<UPlayer_ElectroGaugeComponent>();
-	if (!m_ElectroGaugeComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("SkillComponent: ElectroGaugeComponent not found"));
-	}
 
 	if (OnSkillUsableChanged.IsBound())
 	{
@@ -81,29 +77,29 @@ void UPlayer_SkillComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (m_IsSkillActive && !m_bHasShownHitUI && m_Player)
 	{
-		// プレイヤー側のヒットフラグを確認
+		//プレイヤー側のヒットフラグを確認
 		if (m_Player->GetIsHit())
 		{
-			// UIクラスが設定されているか確認
+			//UIクラスが設定されているか確認
 			if (SkillHitUIClass)
 			{
-				// UIを作成
+				//UIを作成
 				m_ActiveHitUIInstance = CreateWidget<UUserWidget>(GetWorld(), SkillHitUIClass);
 
 				if (m_ActiveHitUIInstance)
 				{
-					// 画面に追加
+					//画面に追加
 					m_ActiveHitUIInstance->AddToViewport();
 				}
 			}
 
-			// 表示済みフラグを立てる（これで連発を防ぐ）
+			//表示済みフラグを立てる（これで連発を防ぐ）
 			m_bHasShownHitUI = true;
 		}
 	}
 
 	//現在の使用可否を取得
-	bool bCurrentUsable = CheckCurrentSkillUsable();
+	const bool bCurrentUsable = CheckCurrentSkillUsable();
 
 	//前回のフレームと状態が違っていたら通知を送る
 	if (bCurrentUsable != m_bLastUsableState)
@@ -132,11 +128,11 @@ void UPlayer_SkillComponent::Input_SkillSelect(const FInputActionValue& Value)
 
 	m_SelectLocked = true;
 
-	if (Axis > 0.5)
+	if (Axis > SkillConstants::SelectInputThreshold)
 	{
 		SelectNextSkill();
 	}
-	else if (Axis < -0.5f)
+	else if (Axis < -SkillConstants::SelectInputThreshold)
 	{
 		SelectPrevSkill();
 	}
@@ -154,7 +150,6 @@ void UPlayer_SkillComponent::Input_SkillActive()
 	if (m_MovementComponent->GetIsJump() || !m_Player->GetCharacterMovement()->IsMovingOnGround())return;
 	if (m_IsSkillActive)return;
 	if (!m_CanSkillActive)return;
-	UE_LOG(LogTemp, Warning, TEXT("Skill!!!!!!!!!!!"));
 
 	m_CurrentAbilitySkill = nullptr;
 
@@ -188,13 +183,13 @@ void UPlayer_SkillComponent::Input_SkillActive()
 
 }
 
+//スキル切り替え
 void UPlayer_SkillComponent::SelectNextSkill()
 {
 	int32 SkillIndex = static_cast<int32>(m_SelectedSkill);
 	SkillIndex = (SkillIndex + 1) % static_cast<int32>(EPlayerSkill::MAX);
 	m_SelectedSkill = static_cast<EPlayerSkill>(SkillIndex);
 }
-
 void UPlayer_SkillComponent::SelectPrevSkill()
 {
 	int32 SkillIndex = static_cast<int32>(m_SelectedSkill);
@@ -203,17 +198,13 @@ void UPlayer_SkillComponent::SelectPrevSkill()
 
 }
 
+
 void UPlayer_SkillComponent::StartThunderFlash()
 {
 	if (!m_Player || !m_Player->HasActorBegunPlay())
 	{
 		return;
 	}
-
-	//if (m_PostProcessActor)
-	//{
-	//	m_PostProcessActor->PlayPostProcess(FName("ThunderFlash"), -1.f);
-	//}
 
 
 	if (UPlayer_CameraComponent* CameraComp =
@@ -232,6 +223,7 @@ void UPlayer_SkillComponent::StartThunderFlash()
 	m_StartLocation = m_Player->GetActorLocation();
 	m_TargetLocation = m_StartLocation + m_Player->GetActorForwardVector() * m_Skill01Distance;
 
+	//ワープ前に敵に引っかからないようコリジョン無視
 	m_Player->GetCapsuleComponent()->SetCollisionResponseToChannel(
 		ECC_Pawn,
 		ECR_Ignore
@@ -279,17 +271,12 @@ void UPlayer_SkillComponent::_updateThunderFlash(float DeltaTime)
 
 	m_Teleported = true;
 
-	//EndSkill();
 }
 
 
 
 void UPlayer_SkillComponent::EndSkill()
 {
-	//if (m_PostProcessActor)
-	//{
-	//	m_PostProcessActor->StopPostProcess(FName("ThunderFlash"));
-	//}
 
 	m_Player->SetIsEnhancedAttack(false);
 

@@ -55,7 +55,7 @@ void APlayerSword::SetAttackActive(bool _Active)
 	{
 		return;
 	}
-	// === ‰‰ñ‚Ì‚Ý‰Šú‰» ===
+	//‰‰ñ‚Ì‚Ý‰Šú‰»
 	if (!m_TrailInitialized)
 	{
 		m_TrailComponent->SetAsset(m_TrailNiagara);
@@ -63,7 +63,7 @@ void APlayerSword::SetAttackActive(bool _Active)
 			m_SwordMesh,
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale
 		);
-		m_TrailComponent->Deactivate(); // ”O‚Ì‚½‚ß
+		m_TrailComponent->Deactivate(); 
 		m_TrailInitialized = true;
 		UE_LOG(LogTemp, Error, TEXT("What?!SecondInitialized??"));
 	}

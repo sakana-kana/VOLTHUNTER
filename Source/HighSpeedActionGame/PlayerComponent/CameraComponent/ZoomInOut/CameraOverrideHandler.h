@@ -37,10 +37,10 @@ public:
 private:
 	// 操作対象への弱い参照（クラッシュ防止のためWeakObjectPtr推奨だが、ポインタでも管理可）
 	UPROPERTY()
-	USpringArmComponent* TargetSpringArm;
+	TWeakObjectPtr<USpringArmComponent> m_TargetSpringArm;
 
 	UPROPERTY()
-	UCameraComponent* TargetCamera;
+	TWeakObjectPtr<UCameraComponent> m_TargetCamera;
 
 	// 状態管理
 	bool m_IsActive = false;

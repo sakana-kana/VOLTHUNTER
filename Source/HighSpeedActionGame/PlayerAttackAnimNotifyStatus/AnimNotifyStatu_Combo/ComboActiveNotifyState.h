@@ -1,4 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当
+//伊藤直樹
+
+//プレイヤーのコンボ発動クラス
 
 #pragma once
 
@@ -19,6 +22,8 @@ class HIGHSPEEDACTIONGAME_API UComboActiveNotifyState : public UAnimNotifyState
 	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
 
 private:
+	//発動済みかどうか
 	bool m_Activated;
+	//入力予約があったか
 	bool m_InputEverRequested;
 };

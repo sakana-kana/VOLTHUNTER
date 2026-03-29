@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//スキルアニメーションGASクラス
+
 #pragma once
 
 #include "CoreMinimal.h"

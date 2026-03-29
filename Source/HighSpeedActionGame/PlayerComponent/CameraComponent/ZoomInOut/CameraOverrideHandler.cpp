@@ -7,8 +7,8 @@
 
 void UCameraOverrideHandler::Initialize(USpringArmComponent* InSpringArm, UCameraComponent* InCamera)
 {
-	TargetSpringArm = InSpringArm;
-	TargetCamera = InCamera;
+	m_TargetSpringArm = InSpringArm;
+	m_TargetCamera = InCamera;
 }
 
 void UCameraOverrideHandler::StartOverride(float TargetLength, float TargetFOV, float Speed)
@@ -27,6 +27,7 @@ void UCameraOverrideHandler::StartOverride(float TargetLength, float TargetFOV, 
 		m_OverrideLength = false;
 	}
 
+	//FOVのバリデーション
 	if (TargetFOV > 0.0f)
 	{
 		m_TargetFOV = TargetFOV;
@@ -41,13 +42,11 @@ void UCameraOverrideHandler::StartOverride(float TargetLength, float TargetFOV, 
 void UCameraOverrideHandler::EndOverride()
 {
 	m_IsActive = false;
-	// ここでパラメータをリセットする必要はない
-	// （呼び出し元のコンポーネントが次のフレームで通常処理に戻るため）
 }
 
 bool UCameraOverrideHandler::UpdateOverride(float DeltaTime)
 {
-	if (!m_IsActive || !TargetSpringArm || !TargetCamera)
+	if (!m_IsActive || !m_TargetSpringArm.IsValid() || !m_TargetCamera.IsValid())
 	{
 		return false;
 	}
@@ -55,16 +54,25 @@ bool UCameraOverrideHandler::UpdateOverride(float DeltaTime)
 	// 距離の補間
 	if (m_OverrideLength)
 	{
-		float NewLen = FMath::FInterpTo(TargetSpringArm->TargetArmLength, m_TargetArmLength, DeltaTime, m_InterpSpeed);
-		TargetSpringArm->TargetArmLength = NewLen;
+		float NewLen = FMath::FInterpTo(
+			m_TargetSpringArm->TargetArmLength,
+			m_TargetArmLength,
+			DeltaTime,
+			m_InterpSpeed
+		);
+		m_TargetSpringArm->TargetArmLength = NewLen;
 	}
 
 	// FOVの補間
 	if (m_OverrideFOV)
 	{
-		float NewFOV = FMath::FInterpTo(TargetCamera->FieldOfView, m_TargetFOV, DeltaTime, m_InterpSpeed);
-		TargetCamera->SetFieldOfView(NewFOV);
+		float NewFOV = FMath::FInterpTo(
+			m_TargetCamera->FieldOfView,
+			m_TargetFOV,
+			DeltaTime,
+			m_InterpSpeed
+		);
+		m_TargetCamera->SetFieldOfView(NewFOV);
 	}
-
 	return true;
 }

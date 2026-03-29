@@ -1,12 +1,12 @@
 //担当
 //伊藤直樹
 
+//弱３段目モーションGASクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "../../AbilityPlayer_Base.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AbilityPlayer_AttackLight03.generated.h"
 
 /**

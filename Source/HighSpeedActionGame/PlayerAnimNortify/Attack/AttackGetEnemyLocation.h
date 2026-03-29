@@ -1,6 +1,8 @@
 //’S“–
 //ˆÉ“¡’¼÷
 
+//“G‚ÌêŠ‚ÉŒü‚©‚¤ƒNƒ‰ƒX
+
 #pragma once
 
 #include "CoreMinimal.h"

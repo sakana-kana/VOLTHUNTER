@@ -39,36 +39,40 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> OpeningWidgetClass;
 
+	//移動開始からUIが消え始めるまでの時間
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Opening Settings")
 	float UiHideDelayTime = 2.0f;
 private:
-	USpringArmComponent* SpringArm;
-	UCameraComponent* Camera;
-
+	TWeakObjectPtr<USpringArmComponent> m_SpringArm;
 	UPROPERTY()
-	APlayerController* PlayerController;
+	TWeakObjectPtr<APlayerController> m_PlayerController;
 
 	bool m_IsActive;
 	float m_CurrentTime;
 	float m_MoveDuration;
 
-	// パラメータキャッシュ
-	float m_InitialArmLength;     // 最終的な距離（通常の距離）
-	float m_StartArmLength;       // 開始時の距離（顔アップ）
+	//パラメータキャッシュ
+	//最終的な距離（通常の距離）
+	float m_InitialArmLength;     
+	//開始時の距離（顔アップ）
+	float m_StartArmLength;       
 
-	FRotator m_InitialRotation;   // 最終的な回転
-	float m_StartYawOffset;       // 開始時の回転オフセット
+	//最終的な回転
+	FRotator m_InitialRotation;   
+	//開始時の回転オフセット
+	float m_StartYawOffset;       
 
-	// 顔の位置に合わせるためのオフセット
+	//顔の位置に合わせるためのオフセット
 	FVector m_InitialSocketOffset;
-	FVector m_FaceSocketOffset;   // 顔の高さ（Z軸）へのオフセット
+	//顔の高さ（Z軸）へのオフセット
+	FVector m_FaceSocketOffset;   
 
 	//停止時間
 	float m_WaitTime;
 
-	// 生成したWidgetを保持しておく変数
+	//生成したWidgetを保持しておく変数
 	UPROPERTY()
 	UUserWidget* m_CreatedWidget;
-	// UIを消したかどうかのフラグ
+	//UIを消したかどうかのフラグ
 	bool m_IsUiHidden;
 };

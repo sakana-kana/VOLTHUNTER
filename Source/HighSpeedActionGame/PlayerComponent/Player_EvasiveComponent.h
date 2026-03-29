@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//プレイヤー回避クラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -42,22 +44,19 @@ public:
 //回避の終了、回避ストックの回復
 	void _updateEvasive(float DeltaTime);
 
-
-
 	//入力コールバック関連
-
-//回避スウェイ
+	//回避スウェイ
 	void Input_Evasive(const FInputActionValue& Value);
 
 
 	//ジャスト回避成功時
-//回避コリジョン生成
+	//回避コリジョン生成
 	void CreateJustEvasiveCollision();
 	//回避コリジョン消去
 	void DestroyJustEvasiveCollision();
 
 	//敵との攻撃判定
-//回避コリジョンと重なったら速度を遅く
+	//回避コリジョンと重なったら速度を遅く
 	UFUNCTION()
 	void OnJustEvasiveOverlap(
 		UPrimitiveComponent* OverlappedComponent,
@@ -67,6 +66,10 @@ public:
 		bool bFromSweep,
 		const FHitResult& SweepResult
 	);
+
+	// UIを消すためのヘルパー関数
+	void HideJustEvasiveUI();
+
 
 	void SetCanEvasive(bool _CanEvasive) { m_CanEvasive = _CanEvasive; }
 	void SetIsEvasive(bool _IsEvasive) { m_IsEvasive = _IsEvasive; }
@@ -80,16 +83,7 @@ private:
 	//ジャスト回避が成功したとき電力ゲージを加算
 	void OnJustEvasiveSuccess();
 
-
-
-	//ジャスト回避のコリジョン
-	UPROPERTY()
-	TObjectPtr<UCapsuleComponent> JustEvasiveCollision;
-
 public:
-	// UIを消すためのヘルパー関数
-	void HideJustEvasiveUI();
-
 	// ジャスト回避成功時に表示するUIクラスを設定
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> JustEvasiveWidgetClass;
@@ -115,6 +109,15 @@ protected:
 	UPlayer_SkillComponent* m_SkillComponent;
 
 private:
+	// 生成したWidgetインスタンス
+	UPROPERTY()
+	UUserWidget* m_JustEvasiveWidgetInstance;
+
+	//ジャスト回避のコリジョン
+	UPROPERTY()
+	TObjectPtr<UCapsuleComponent> JustEvasiveCollision;
+
+
 	//回避スウェイ状態かどうか
 	bool m_IsEvasive;
 
@@ -140,10 +143,6 @@ private:
 
 	//回避できるか
 	bool m_CanEvasive;
-
-	// 生成したWidgetインスタンス
-	UPROPERTY()
-	UUserWidget* m_JustEvasiveWidgetInstance;
 
 	// スローモーション監視用タイマー
 	float m_CurrentSlowMotionWatchTime;

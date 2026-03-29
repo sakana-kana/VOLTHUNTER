@@ -92,20 +92,6 @@ void UPlayer_AttackComponent::_updateAttackHeavy(float DeltaTime)
 		//最大溜め時間
 		m_HeavyChargeTime = FMath::Min(m_HeavyChargeTime, PlayerParam.HeavyChargeMaxTime);
 
-		// デバッグ画面に溜め時間表示
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(
-				1,                      // 同じIDで上書き
-				0.f,                    // 0.f = 毎フレーム更新
-				FColor::Cyan,
-				FString::Printf(
-					TEXT("Heavy Charge Time : %.2f / %.2f"),
-					m_HeavyChargeTime,
-					PlayerParam.HeavyChargeMaxTime
-				)
-			);
-		}
 		return;
 	}
 
@@ -152,7 +138,7 @@ void UPlayer_AttackComponent::_updateAirAttackUnlock()
 //弱攻撃
 void UPlayer_AttackComponent::Input_AttackLight(const FInputActionValue& Value)
 {
-
+	if (!m_CanAttack)return;
 
 	//攻撃入力を受け付けるか
 	if (!CanAcceptAttackInput())return;
@@ -197,35 +183,40 @@ void UPlayer_AttackComponent::Input_AttackLight(const FInputActionValue& Value)
 	//コンボ予約受付中かチェック
 	if (m_CanBufferAttack)
 	{
-		//予約済みでなければ次の攻撃を予約
-		if (!m_NextAttackRequested && m_ComboIndex == 2)
-		{
-			m_Player->m_BufferedNextAbility = m_Player->m_AbilityPlayer_AttackLight03;
-			m_NextAttackRequested = true;
-			m_ComboIndex = 0;
-		}
+		//すでに次の攻撃が予約済みであれば、これ以上何もしない
+		if (m_NextAttackRequested) return;
 
-		//予約済みでなければ次の攻撃を予約
-		if (!m_NextAttackRequested && m_ComboIndex == 1)
+		//現在1段目の攻撃中なら、2段目を予約する
+		if (m_ComboIndex == 1)
 		{
 			m_Player->m_BufferedNextAbility = m_Player->m_AbilityPlayer_AttackLight02;
 			m_NextAttackRequested = true;
-			m_ComboIndex = 2;
+			m_ComboIndex = 2; // 次に発動するのは2段目
 		}
+		//現在2段目の攻撃中なら、3段目を予約する
+		else if (m_ComboIndex == 2)
+		{
+			m_Player->m_BufferedNextAbility = m_Player->m_AbilityPlayer_AttackLight03;
+			m_NextAttackRequested = true;
+			m_ComboIndex = 0; //3段目でコンボ終了（またはループ）のためリセット
+		}
+
 		return;
 	}
 
-	//予約できない場合は弱攻撃1段目を発動
+	//予約できない（コンボ中ではない）場合は弱攻撃1段目を発動
 	if (m_Player->m_AbilityPlayer_AttackLight01)
 	{
-		m_ComboIndex = 1;
+		m_ComboIndex = 1; //1段目を発動したことを記録
 		m_Player->GetAbilitySystemComponent()->TryActivateAbilityByClass(m_Player->m_AbilityPlayer_AttackLight01);
 	}
-
 }
 
 void UPlayer_AttackComponent::Input_AttackHeavy(const FInputActionValue& Value)
 {
+	if (!m_CanAttack)return;
+
+
 	//攻撃入力を受け付けるか
 	if (!CanAcceptAttackInput())return;
 	if (m_IsAttack) return;
@@ -378,7 +369,6 @@ void UPlayer_AttackComponent::AirAttackEnd()
 //強空中攻撃発動
 void UPlayer_AttackComponent::AirFallAttack()
 {
-	m_IsAirFallAttack = true;
 	if (!m_Player) return;
 
 	m_Player->DeleteCollision();
@@ -540,216 +530,97 @@ void UPlayer_AttackComponent::AirDashAttack()
 //攻撃踏み込み開始
 void UPlayer_AttackComponent::AttackFirstStepBegin()
 {
-	//プレイヤーが存在するか
 	if (!m_Player) return;
 
-	//ロック中の敵が死亡中なら即解除
-	if (m_LockedAttackTarget && m_LockedAttackTarget->GetIsDying())
-	{
-		ClearLockedAttackTarget();
-	}
-
-
-	if (m_EvasiveComponent->GetIsJustEvasive())return;
+	if (m_EvasiveComponent->GetIsJustEvasive()) return;
 
 	m_HasAttackTargetLocation = false;
-
-	//プレイヤーの位置を取得
 	const FVector PlayerLocation = m_Player->GetActorLocation();
 
-
-
-	//---ロックオン中---------------------------------------------------------------------------------
-	//前方に踏み込む
-	if (m_CameraComponent->GetIsTargetLockedOn())
-	{
-		//ロックオンカメラの回転取得
-		const FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-
-		//カメラの前方ベクトルを計算
-		FVector Forward = FRotationMatrix(FRotator(0.f, CameraRotation.Yaw, 0.f)).GetUnitAxis(EAxis::X);
-
-		//目標地点ヘ踏み込む
-		m_AttackTargetLocation = PlayerLocation + Forward * PlayerParam.AttackEnemyNothing;
-
-		//踏み込みは常に水平方向
-		m_AttackTargetLocation.Z = PlayerLocation.Z;
-		m_HasAttackTargetLocation = true;
-
-		//プレイヤーの向きを踏み込み方向へ回転
-		m_Player->SetActorRotation(Forward.Rotation());
-		return;
-	}
-
-
-
-	//===入力取得 ===
+	// 入力情報の取得
 	FVector MoveDirection = FVector::ZeroVector;
 	m_MovementComponent->GetDesiredMoveDirection(MoveDirection);
-
-	//入力があるかどうか
 	const bool bHasMoveInput = m_MovementComponent->GetIsMoveInput();
 
-	//===入力なし　ロック済みの敵がいるとき ===
+	//敵を自動検索してターゲットする場合
+	if (TryTargetAutoSearch(PlayerLocation, MoveDirection, bHasMoveInput)) return;
+
+	//ターゲットがいない場合は前方へ空振り踏み込み
+	TargetForward(PlayerLocation, MoveDirection, bHasMoveInput);
+}
+
+bool UPlayer_AttackComponent::TryTargetAutoSearch(const FVector& PlayerLocation, const FVector& MoveDirection, bool bHasMoveInput)
+{
+	// 入力があれば既存のソフトロックは解除
+	if (bHasMoveInput) ClearLockedAttackTarget();
+
+	// 既定のターゲットがいればそこへ
 	if (!bHasMoveInput && HasLockedAttackTarget())
 	{
-		const FVector EnemyLocation = m_LockedAttackTarget->GetActorLocation();
+		const AEnemyBase* Enemy = m_LockedAttackTarget.Get();
+		FVector ToEnemy = (Enemy->GetActorLocation() - PlayerLocation).GetSafeNormal2D();
 
-		FVector ToEnemy = EnemyLocation - PlayerLocation;
-		ToEnemy.Z = 0.f;
+		FVector TargetLocation = Enemy->GetActorLocation() - (ToEnemy * Enemy->GetWarpOffsetDistance());
+		ApplyTargetLocation(TargetLocation, ToEnemy);
 
-		//万が一ゼロ長さ対策
-		if (!ToEnemy.IsNearlyZero())
-		{
-			ToEnemy.Normalize();
-		}
-		float WarpDist = m_LockedAttackTarget->GetWarpOffsetDistance();
-		m_AttackTargetLocation = EnemyLocation - (ToEnemy * WarpDist);
-
-		m_AttackTargetLocation.Z = PlayerLocation.Z;
-
-		m_Player->SetActorRotation(ToEnemy.Rotation());
-		m_HasAttackTargetLocation = true;
-
-		//攻撃開始時にカメラを補間して敵に向ける
-		if (m_CameraComponent)
-		{
-			m_CameraComponent->OnJEnemyDirection(m_LockedAttackTarget,false);
-		}
-
-		return;
+		if (m_CameraComponent) m_CameraComponent->OnJEnemyDirection(Enemy, false);
+		return true;
 	}
 
-	//=== 新しい敵を探す・入力があれば既存ロック解除 ===
+	// 敵マネージャーから新規検索
+	UEnemyManager* EnemyManager = m_Player->GetWorld()->GetSubsystem<UEnemyManager>();
+	if (!EnemyManager) return false;
+
+	const AEnemyBase* ClosestEnemy = EnemyManager->GetClosestActiveEnemyFromCoordinates(PlayerLocation);
+	if (!ClosestEnemy || !ClosestEnemy->GetIsActive()) return false;
+
+	FVector EnemyLocation = ClosestEnemy->GetActorLocation();
+	FVector DirectionToEnemy = (EnemyLocation - PlayerLocation).GetSafeNormal2D();
+	float Distance = FVector::Dist2D(PlayerLocation, EnemyLocation);
+
+	// 攻撃範囲外なら無視
+	if (Distance > PlayerParam.AttackRange) return false;
+
+	// 入力がある場合は、入力方向と敵の方向の角度をチェック
 	if (bHasMoveInput)
 	{
-		ClearLockedAttackTarget();
+		if (!m_CameraComponent->IsLocationInCameraView(EnemyLocation)) return false;
+
+		FVector MoveDirNorm = MoveDirection.GetSafeNormal2D();
+		float Dot = FVector::DotProduct(MoveDirNorm, DirectionToEnemy);
+		float DirectionThreshold = FMath::Cos(FMath::DegreesToRadians(PlayerParam.AttackInputAngle));
+
+		if (Dot < DirectionThreshold) return false;
 	}
 
+	// 条件をクリアしたのでターゲットに設定
+	SetLockedAttackTarget(ClosestEnemy);
+	FVector TargetLocation = EnemyLocation - (DirectionToEnemy * ClosestEnemy->GetWarpOffsetDistance());
+	ApplyTargetLocation(TargetLocation, DirectionToEnemy);
 
-	//敵マネージャーを取得
-	UEnemyManager* EnemyManager = m_Player->GetWorld()->GetSubsystem<UEnemyManager>();
-	//もっとも近い敵を探す
-	const AEnemyBase* NewEnemyTarget = nullptr;
+	if (m_CameraComponent) m_CameraComponent->OnJEnemyDirection(ClosestEnemy, false);
 
-	//=== 敵探索 ===
-	//入力無し
-	if (EnemyManager)
-	{
-		if (!bHasMoveInput)
-		{
-			//まずは候補を取得
-			const AEnemyBase* CandidateEnemy = EnemyManager->GetClosestActiveEnemyFromCoordinates(PlayerLocation);
+	return true;
+}
 
-			// 候補が有効かチェック
-			if (CandidateEnemy && CandidateEnemy->GetIsActive())
-			{
-				//距離チェックを追加
-				//どんなに近くても、攻撃範囲外ならターゲットにしない
-				float Dist = FVector::Dist(PlayerLocation, CandidateEnemy->GetActorLocation());
+void UPlayer_AttackComponent::TargetForward(const FVector& PlayerLocation, const FVector& MoveDirection, bool bHasMoveInput)
+{
+	FVector Forward = (bHasMoveInput && !MoveDirection.IsNearlyZero())
+		? MoveDirection.GetSafeNormal2D()
+		: m_Player->GetActorForwardVector().GetSafeNormal2D();
 
-				if (Dist <= PlayerParam.AttackRange)
-				{
-					NewEnemyTarget = CandidateEnemy;
-				}
-			}
+	FVector TargetLocation = PlayerLocation + Forward * PlayerParam.AttackEnemyNothing;
+	ApplyTargetLocation(TargetLocation, Forward);
+}
 
-		}
-		else
-		{
-			MoveDirection.Z = 0.f;
-
-			if (!MoveDirection.IsNearlyZero())
-			{
-				MoveDirection.Normalize();
-
-				const AEnemyBase* ClosestEnemy = EnemyManager->GetClosestActiveEnemyFromCoordinates(PlayerLocation);
-				if (ClosestEnemy && ClosestEnemy->GetIsActive())
-				{
-					//敵の位置を取得
-					const FVector EnemyLocation = ClosestEnemy->GetActorLocation();
-					//敵の位置がカメラの視野内に存在するか
-					if (m_CameraComponent->IsLocationInCameraView(EnemyLocation))
-					{
-						//プレイヤーから敵への水平ベクトル
-						FVector DirectionToEnemy = EnemyLocation - PlayerLocation;
-						DirectionToEnemy.Z = 0.f;
-						//敵との距離
-						const float Distance = DirectionToEnemy.Size();
-
-						// 敵が間合い内なら敵方向へ
-						if (Distance <= PlayerParam.AttackRange)
-						{
-							//敵方向ベクトル正規化
-							DirectionToEnemy.Normalize();
-
-							//入力方向との角度判定
-							const float Dot = FVector::DotProduct(MoveDirection, DirectionToEnemy);
-
-							//入力があるときの敵を見つける角度
-							const float DirectionThreshold = FMath::Cos(FMath::DegreesToRadians(PlayerParam.AttackInputAngle));
-							if (Dot >= DirectionThreshold)
-							{
-								NewEnemyTarget = ClosestEnemy;
-							}
-						}
-					}
-				}
-
-			}
-		}
-	}
-	//=== 敵が決定・ロック ===
-	if (NewEnemyTarget && NewEnemyTarget->GetIsActive())
-	{
-		SetLockedAttackTarget(NewEnemyTarget);
-
-		const FVector EnemyLocation = NewEnemyTarget->GetActorLocation();
-
-		FVector ToEnemy = EnemyLocation - PlayerLocation;
-		ToEnemy.Z = 0.f;
-
-		//万が一ゼロ長さ対策
-		if (!ToEnemy.IsNearlyZero())
-		{
-			ToEnemy.Normalize();
-		}
-
-		float WarpDist = NewEnemyTarget->GetWarpOffsetDistance();
-		m_AttackTargetLocation = EnemyLocation - (ToEnemy * WarpDist);
-
-		m_AttackTargetLocation.Z = PlayerLocation.Z;
-
-		m_Player->SetActorRotation(ToEnemy.Rotation());
-		m_HasAttackTargetLocation = true;
-
-		//攻撃開始時にカメラを補間して敵に向ける
-		if (m_CameraComponent)
-		{
-			m_CameraComponent->OnJEnemyDirection(NewEnemyTarget,false);
-		}
-		return;
-
-	}
-
-	//=== 敵なし ===
-	FVector Forward;
-
-	if (bHasMoveInput && !MoveDirection.IsNearlyZero())
-	{
-		Forward = MoveDirection.GetSafeNormal();
-	}
-	else
-	{
-		Forward = m_Player->GetActorForwardVector();
-	}
-
-	m_AttackTargetLocation = PlayerLocation + Forward * PlayerParam.AttackEnemyNothing;
-	m_AttackTargetLocation.Z = PlayerLocation.Z;
-
-	m_Player->SetActorRotation(Forward.Rotation());
+void UPlayer_AttackComponent::ApplyTargetLocation(const FVector& TargetLocation, const FVector& DirectionToTarget)
+{
+	m_AttackTargetLocation = TargetLocation;
+	m_AttackTargetLocation.Z = m_Player->GetActorLocation().Z; // 高さは維持
+	m_Player->SetActorRotation(DirectionToTarget.Rotation());
 	m_HasAttackTargetLocation = true;
 }
+
 
 //攻撃踏み込み移動
 void UPlayer_AttackComponent::AttackFirstStepTick()
@@ -761,13 +632,11 @@ void UPlayer_AttackComponent::AttackFirstStepTick()
 	const FVector CurrentLocation = m_Player->GetActorLocation();
 
 	//目標位置
-	FVector TargetLocation =
-		m_AttackTargetLocation - CurrentLocation;
+	FVector TargetLocation =m_AttackTargetLocation - CurrentLocation;
 
 	if (!m_IsAirDashAttack) {
 		// 高さ方向は無視
 		TargetLocation.Z = 0.f;
-		//UE_LOG(LogTemp, Warning, TEXT("TargetLocation.Z = 0.f"));
 	}
 	const float Distance = TargetLocation.Size();
 
@@ -820,7 +689,7 @@ void UPlayer_AttackComponent::AttackFirstStepEnd()
 
 void UPlayer_AttackComponent::SetLockedAttackTarget(const AEnemyBase* Enemy)
 {
-	m_LockedAttackTarget = const_cast<AEnemyBase*>(Enemy);
+	m_LockedAttackTarget = Enemy;
 }
 
 void UPlayer_AttackComponent::OnJumpStarted()
@@ -836,7 +705,7 @@ void UPlayer_AttackComponent::ClearLockedAttackTarget()
 
 bool UPlayer_AttackComponent::HasLockedAttackTarget() const
 {
-	return m_LockedAttackTarget && m_LockedAttackTarget->GetIsActive();
+	return m_LockedAttackTarget.IsValid() && m_LockedAttackTarget->GetIsActive();
 }
 
 
@@ -954,3 +823,4 @@ bool UPlayer_AttackComponent::IsJumping() const
 {
 	return m_MovementComponent && m_MovementComponent->GetIsJump();
 }
+

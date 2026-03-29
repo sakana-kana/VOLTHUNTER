@@ -6,18 +6,17 @@
 #include "Components/PostProcessComponent.h"
 #include "GameFramework/Actor.h"
 
-// 探すタグの名前を定数にしておく（ミス防止）
+//探すタグの名前を定数にしておく
 const FName EFFECT_TAG_NAME = FName("PostProsess");
 
 void UPostProsess::SetPostProsessActive(bool _Active)
 {
-	// Actorを取得（キャッシュにあればそれを使う）
+	//Actorを取得（キャッシュにあればそれを使う）
 	AActor* TargetActor = FindPostProsessActor();
 
 	if (TargetActor)
 	{
-		// ポストプロセスコンポーネントを探して切り替える
-		// (BPで追加したコンポーネントも、C++からは汎用クラスとして取得可能)
+		//ポストプロセスコンポーネントを探して切り替える
 		if (UPostProcessComponent* PP = TargetActor->FindComponentByClass<UPostProcessComponent>())
 		{
 			PP->bEnabled = _Active;
@@ -41,12 +40,11 @@ AActor* UPostProsess::FindPostProsessActor()
 
 	if (FoundActors.Num() > 0)
 	{
-		// 見つかったらキャッシュする
+		//見つかったらキャッシュする
 		CachedEffectActor = FoundActors[0];
 		return CachedEffectActor.Get();
 	}
 
-	// 見つからなかった場合
-	UE_LOG(LogTemp, Warning, TEXT("ScreenEffectManager: Actor with tag 'BlackWhite' not found!"));
+	//見つからなかった場合
 	return nullptr;
 }

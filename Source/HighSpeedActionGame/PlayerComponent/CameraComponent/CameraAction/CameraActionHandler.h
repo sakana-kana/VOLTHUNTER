@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//カメラ距離とFOVの制御を管理するハンドラー
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,53 +15,51 @@ class UCameraComponent;
 class APlayerCharacter;
 class APlayerController;
 class UPlayer_MovementComponent;
-/**
- * 
- */
+
 UCLASS()
 class HIGHSPEEDACTIONGAME_API UCameraActionHandler : public UObject
 {
 	GENERATED_BODY()
 	
 public:
-	// 初期化
+	//初期化
 	void Initialize(APlayerCharacter* InPlayer, APlayerController* InController,
 		USpringArmComponent* InSpringArm, UCameraComponent* InCamera,
 		UPlayer_MovementComponent* InMovementComp);
 
-	// 毎フレームの更新
+	//毎フレームの更新
 	void UpdateActionCamera(float DeltaTime);
 
-	// パラメータ設定用（ComponentのPlayerParamから値をコピーしてくる）
+	//パラメータ設定用（ComponentのPlayerParamから値をコピーしてくる）
 	void SetupParams(float InDefaultLength, float InDefaultFOV,
 		float InDashStartLength, float InDashStartFOV,
 		float InDashMidLength, float InDashMidFOV);
 
 private:
-	// オートフレーミング計算（privateに隠蔽）
+	//オートフレーミング計算（privateに隠蔽）
 	float GetAutoFramingOffset(float DeltaTime);
 
 private:
-	// 参照ポインタ
+	//参照ポインタ
 	UPROPERTY()
-	APlayerCharacter* m_Player;
+	TWeakObjectPtr<APlayerCharacter> m_Player;
 
 	UPROPERTY()
-	APlayerController* m_PlayerController;
+	TWeakObjectPtr<APlayerController> m_PlayerController;
 
 	UPROPERTY()
-	USpringArmComponent* m_SpringArm;
+	TWeakObjectPtr<USpringArmComponent> m_SpringArm;
 
 	UPROPERTY()
-	UCameraComponent* m_Camera;
+	TWeakObjectPtr<UCameraComponent> m_Camera;
 
 	UPROPERTY()
-	UPlayer_MovementComponent* m_MovementComponent;
+	TWeakObjectPtr<UPlayer_MovementComponent> m_MovementComponent;
 
-	// --- 内部ステート変数 ---
+	//--- 内部ステート変数 ---
 	float m_AutoFramingOffset;
 
-	// --- パラメータ (Componentから受け取る) ---
+	//--- パラメータ (Componentから受け取る) ---
 	float p_DefaultArmLength;
 	float p_DefaultFOV;
 	float p_DashStartArmLength;
@@ -67,7 +67,4 @@ private:
 	float p_DashMidArmLength;
 	float p_DashMidFOV;
 
-	// 定数（必要ならこれもSetupParamsで受け取れるようにする）
-	const float c_FramingSafeZone = 0.2f;
-	const float c_MaxFramingZoom = 800.f;
 };

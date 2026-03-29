@@ -1,4 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当
+//伊藤直樹
+
+//ゲーム内のサウンドを管理するクラス
 
 #pragma once
 
@@ -20,15 +23,16 @@ public:
 
 
     // --- 呼び出し用 ---
+    //通常インゲーム
     UFUNCTION(BlueprintCallable, Category = "BGM")
     void PlayNormalBGM();
-
+    //ボス戦
     UFUNCTION(BlueprintCallable, Category = "BGM")
     void PlayBossBGM();
-
+    //クリア時
     UFUNCTION(BlueprintCallable, Category = "BGM")
     void PlayClearBGM();
-
+    //曲を止める
     UFUNCTION(BlueprintCallable, Category = "BGM")
     void StopBGM();
 

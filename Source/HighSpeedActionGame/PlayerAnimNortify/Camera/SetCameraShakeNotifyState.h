@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//カメラをシェイクさせるクラス
+
 #pragma once
 
 #include "CoreMinimal.h"

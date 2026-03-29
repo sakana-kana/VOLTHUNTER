@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//プレイヤー攻撃クラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -127,6 +129,10 @@ private:
 	//ジャンプ中か
 	bool IsJumping()const;
 
+	bool TryTargetAutoSearch(const FVector& PlayerLocation, const FVector& MoveDirection, bool bHasMoveInput);
+	void TargetForward(const FVector& PlayerLocation, const FVector& MoveDirection, bool bHasMoveInput);
+	void ApplyTargetLocation(const FVector& TargetLocation, const FVector& DirectionToTarget);
+
 protected:
 	APlayerCharacter* m_Player;
 
@@ -143,11 +149,11 @@ protected:
 	UPlayer_ElectroGaugeComponent* m_ElectroComponent;
 
 	//プレイヤーのパラメーター
-//BPで操作できる値のみ
+	//BPで操作できる値のみ
 	FPlayerParam PlayerParam;
 
 	//固定するターゲット
-	AEnemyBase* m_LockedAttackTarget;
+	TWeakObjectPtr<const AEnemyBase> m_LockedAttackTarget;
 private:
 
 	//攻撃が可能か

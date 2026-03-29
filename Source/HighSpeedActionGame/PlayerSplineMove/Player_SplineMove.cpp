@@ -149,7 +149,7 @@ void APlayer_SplineMove::RequestStartSplineMove(AActor* RequestActor)
 {
 	if (m_RunningSplineMove) return;
 	if (RequestActor != m_CandidateActor) return;
-	if (m_SkillComponent && m_SkillComponent->GetIsSkillActive())return;
+	if (m_SkillComponent.IsValid() && m_SkillComponent->GetIsSkillActive())return;
 
 	if (m_InputPromptWidget)
 	{
@@ -172,7 +172,7 @@ void APlayer_SplineMove::RequestStartSplineMove(AActor* RequestActor)
 	{
 		if (APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController()))
 		{
-			PlayerController->SetIgnoreMoveInput(true);   // šˆÚ“®‚Ì‚Ý–³Œø
+			PlayerController->SetIgnoreMoveInput(true);   //ˆÚ“®‚Ì‚Ý–³Œø
 		}
 	}
 
@@ -228,9 +228,8 @@ void APlayer_SplineMove::OnStartOverlap(UPrimitiveComponent* OverlappedComp, AAc
 	m_EvasiveComponent = PlayerCharacter->FindComponentByClass<UPlayer_EvasiveComponent>();
 	m_SkillComponent = PlayerCharacter->FindComponentByClass<UPlayer_SkillComponent>();
 
-	if (!m_AttackComponent || !m_EvasiveComponent || !m_SkillComponent)
+	if (!m_AttackComponent.IsValid() || !m_EvasiveComponent.IsValid() || !m_SkillComponent.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("SplineMove: Player components missing"));
 		return;
 	}
 	if (m_InputPromptWidget)

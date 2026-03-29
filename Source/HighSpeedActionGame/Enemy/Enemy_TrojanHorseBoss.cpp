@@ -57,5 +57,11 @@ void AEnemy_TrojanHorseBoss::TakeDamage(const FDamageInfo& _damageInfo) {
 	if (m_EnemyParam.m_Hp <= 0)
 	{
 		OnDying();//•mŽ€ˆ—ŒÄ‚Ño‚·
+
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance && m_DamageMontage)
+		{
+			AnimInstance->Montage_Play(m_DamageMontage);
+		}
 	}
 }

@@ -10,6 +10,7 @@ class UTitleModeSelectWidge;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
+class USettingsWidget;
 /**
  *
  */
@@ -28,6 +29,14 @@ protected:
 	void ReturnAction(const FInputActionValue& Value);
 	void MoveUpSelection(const FInputActionValue& Value);
 	void MoveDownSelection(const FInputActionValue& Value);
+	void MoveRightSelection(const FInputActionValue& Value);
+	void MoveLeftSelection(const FInputActionValue& Value);
+
+	//ボタンを離したときの処理
+	void ResetSettingInput(const FInputActionValue& Value);
+	//アニメーション終了時
+	UFUNCTION()
+	void OnSettingsWidgetClosed();
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputMappingContext* TitleMappingContext;
@@ -46,6 +55,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* m_MoveDownSelectionAction;
 
+	UPROPERTY(EditAnywhere,Category = "Input")
+	UInputAction* m_MoveRightSelectionAction;
+
+	UPROPERTY(EditAnywhere,Category = "Input")
+	UInputAction* m_MoveLeftSelectionAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<USettingsWidget> SettingsWidgetClass;
+
 
 	bool IsModeSelectOpen = false;
 
@@ -63,4 +81,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Level")
 	TArray<TSoftObjectPtr<UWorld>> LevelAssetToLoad;
 
+private:
+	UPROPERTY()
+	class USettingsWidget* SettingsWidget;
+
+	bool m_IsSettingOpen = false;
 };

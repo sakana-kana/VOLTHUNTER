@@ -1,12 +1,13 @@
 //担当
 //伊藤直樹
 
+//カメラの管理クラス
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "CameraComponent/ZoomInOut/CameraOverrideHandler.h"
 #include "CameraComponent/OpeningCamera/CameraOpeningHandler.h"
-//#include "CameraComponent/LockOn/CameraLockOnHandler.h"
 #include "CameraComponent/CameraAction/CameraActionHandler.h"
 #include "CameraComponent/CameraBoss/CameraBossHandler.h"
 #include "CameraComponent/CameraDie/CameraDieHandler.h"
@@ -49,15 +50,12 @@ class HIGHSPEEDACTIONGAME_API UPlayer_CameraComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	UPlayer_CameraComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 
@@ -66,8 +64,6 @@ public:
 	//デッドゾーン判定
 	void _updateCameraFocus(float DeltaTime);
 
-	//カメラが一定時間たつと自動で戻る
-	void _updateAutoCameraReturn(float DeltaTime);
 
 	//敵の方向へカメラを向ける
 	void _updateEnemyDirectionCamera(float DeltaTime);
@@ -106,23 +102,7 @@ public:
 	//カメラリセット
 	void Input_CameraReset(const FInputActionValue& Value);
 
-	//カメラロックオン
-	void Input_TargetLockOn(const FInputActionValue& Value);
-
-	//ターゲットを変える
-	void Input_TargetChange(const FInputActionValue& Value);
-
 	void OnJEnemyDirection(const AActor* Target, bool _LowAngle = false);
-
-	// ロックオン中か返す関数
-	UFUNCTION(BlueprintCallable, Category = "LockOn")
-	bool GetIsTargetLockedOn() const { return m_IsTargetLockOn; }
-
-	void SetIsTargetLockedOn(const bool _IsTargetLockOn) { m_IsTargetLockOn = _IsTargetLockOn; }
-
-	//ロックオンカメラを使用しているかを与える
-	TObjectPtr<UCameraComponent> GetLockOnCamera() const { return m_LockOnCamera; }
-
 
 	//ゲームクリア時のカメラ
 	void ClearCamera();
@@ -213,8 +193,6 @@ private:
 	UCameraOverrideHandler* OverrideHandler;
 
 
-	//UPROPERTY()
-	//UCameraLockOnHandler* LockOnHandler;
 
 	// ハンドラ定義
 	UPROPERTY()
@@ -232,21 +210,13 @@ private:
 	TObjectPtr<UCameraComponent> m_Camera;
 
 
-	//ロックオン用スプリングアーム
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USpringArmComponent> m_LockOnSpringArm;
-	//ロックオン用カメラ
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> m_LockOnCamera;
-
-
 	//コントローラ
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = PlayerController, meta = (AllowPrivateAccess = "true"))
 
 	TWeakObjectPtr<APlayerController> m_PlayerController;
 
 
-	const AActor* m_EnemyTarget;
+	TWeakObjectPtr<const AActor> m_EnemyTarget;
 
 	//ジャスト回避時の補間速度
 	float m_EnemyDirectionInterpSpeed;
@@ -326,4 +296,7 @@ private:
 	// 既存のTick内に補間処理を追加するための変数
 	UPROPERTY(EditAnywhere, Category = "Camera|Tutorial")
 	float m_SideOffsetInterpSpeed = 5.0f;
+
+	bool m_bInvertCameraX = false;
+	bool m_bInvertCameraY = false;
 };

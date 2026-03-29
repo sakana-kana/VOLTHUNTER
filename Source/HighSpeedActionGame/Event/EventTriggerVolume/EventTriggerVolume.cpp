@@ -19,13 +19,15 @@ AEventTriggerVolume::AEventTriggerVolume()
 	m_TriggerBox->SetCollisionProfileName(TEXT("Trigger"));
 	m_TriggerBox->SetGenerateOverlapEvents(true);
 
-	m_TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &AEventTriggerVolume::OnOverlapBegin);
 }
 
 // Called when the game starts or when spawned
 void AEventTriggerVolume::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!m_TriggerBox)return;
+	m_TriggerBox->OnComponentBeginOverlap.AddUniqueDynamic(this, &AEventTriggerVolume::OnOverlapBegin);
 
 }
 

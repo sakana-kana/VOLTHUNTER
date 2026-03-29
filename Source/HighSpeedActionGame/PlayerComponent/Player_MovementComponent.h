@@ -36,11 +36,9 @@ class HIGHSPEEDACTIONGAME_API UPlayer_MovementComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	UPlayer_MovementComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;

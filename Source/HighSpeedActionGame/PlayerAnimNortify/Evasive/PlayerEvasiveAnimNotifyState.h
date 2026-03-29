@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//回避コリジョン生成破棄クラス
+
 #pragma once
 
 #include "CoreMinimal.h"

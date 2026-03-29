@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//Spline移動クラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -23,20 +25,19 @@ class HIGHSPEEDACTIONGAME_API APlayer_SplineMove : public AActor
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	APlayer_SplineMove();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	//プレイヤー側から移動開始を要求
 	void RequestStartSplineMove(AActor* RequestActor);
 
 protected:
+	//アクセス可能範囲に入った/出た時
 	UFUNCTION()
 	void OnStartOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
@@ -45,17 +46,13 @@ protected:
 
 
 protected:
-	APlayerCharacter* m_Player;
-
+	TWeakObjectPtr<APlayerCharacter> m_Player;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Component")
-	UPlayer_EvasiveComponent* m_EvasiveComponent;
-
+	TWeakObjectPtr<UPlayer_EvasiveComponent> m_EvasiveComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Component")
-	UPlayer_AttackComponent* m_AttackComponent;
-
+	TWeakObjectPtr<UPlayer_AttackComponent> m_AttackComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Component")
-	UPlayer_SkillComponent* m_SkillComponent;
-
+	TWeakObjectPtr<UPlayer_SkillComponent> m_SkillComponent;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))

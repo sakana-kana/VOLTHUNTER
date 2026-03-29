@@ -1,6 +1,9 @@
 //担当
 //伊藤直樹
 
+//プレイヤーの見た目を消すクラス
+//ただエフェクトは消えない
+
 #pragma once
 
 #include "CoreMinimal.h"

@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//プレイヤー強化ゲージクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -25,15 +27,12 @@ class HIGHSPEEDACTIONGAME_API UPlayer_ElectroGaugeComponent : public UActorCompo
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
 	UPlayer_ElectroGaugeComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
@@ -79,16 +78,18 @@ protected:
 	UNiagaraComponent* m_OverchargeEffectComp;
 
 private:
-	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge")
+	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge", meta = (AllowPrivateAccess = "true"))
 	float m_MaxGauge;
 
-	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge")
+	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge", meta = (AllowPrivateAccess = "true"))
 	float m_CurrentGauge;
 
-	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge")
+	// 通常時のベース減少速度
+	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge", meta = (AllowPrivateAccess = "true"))
 	float m_NormalDecayRate;
 
-	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge")
+	// オーバーチャージ中の減少速度
+	UPROPERTY(EditDefaultsOnly, Category = "ElectroGauge", meta = (AllowPrivateAccess = "true"))
 	float m_OverChargeDecayRate;
 
 	//最後にゲージが増えた時刻
@@ -106,6 +107,6 @@ private:
 	//減少しているか
 	bool m_IsDecaying;
 
-	UPROPERTY(VisibleInstanceOnly, Category = "ElectroGauge")
-	EElectroState m_ElectroState = EElectroState::Normal;
+	UPROPERTY(VisibleInstanceOnly, Category = "ElectroGauge", meta = (AllowPrivateAccess = "true"))
+	EElectroState m_ElectroState;
 };

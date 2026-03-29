@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//プレイヤーの状態を通知するクラス
+
 #pragma once
 
 #include "CoreMinimal.h"

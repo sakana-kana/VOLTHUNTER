@@ -13,6 +13,19 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../PlayerCharacter.h"
 
+namespace MovementConstants
+{
+	constexpr float IdleVelocitySqThreshold = 30.f;        //アイドル判定とする速度の二乗
+	constexpr float MoveRotationRateYaw = 1300.f;          //移動時のキャラの旋回速度
+	constexpr float DashDecelBraking = 500.f;              //ダッシュ終了時のブレーキ力
+	constexpr float DashDecelFriction = 2.f;               //ダッシュ終了時の摩擦力
+	constexpr float DashInertiaInterpSpeed = 3.0f;         //ダッシュ終了時の慣性補間速度
+	constexpr float DashEndVelocitySqThreshold = 900.0f;   //この速度以下になればダッシュ完全終了
+	constexpr float JumpCooldownTime = 0.2f;               //着地後のジャンプクールタイム
+	constexpr float JumpShortReleaseMultiplier = 0.35f;    //ジャンプボタン短押し時の上昇減衰率
+	constexpr float InputDeadZoneSq = 0.1f;                //入力のデッドゾーン（二乗）
+}
+
 // Sets default values for this component's properties
 UPlayer_MovementComponent::UPlayer_MovementComponent()
 	:m_Player(nullptr)
@@ -52,16 +65,12 @@ void UPlayer_MovementComponent::BeginPlay()
 
 
 	m_CameraComponent = m_Player->FindComponentByClass<UPlayer_CameraComponent>();
-	if (!m_CameraComponent)return;
 
 	m_EvasiveComponent = m_Player->FindComponentByClass<UPlayer_EvasiveComponent>();
-	if (!m_EvasiveComponent)return;
 
 	m_AttackComponent = m_Player->FindComponentByClass<UPlayer_AttackComponent>();
-	if (!m_AttackComponent)return;
 
 	m_ElectroComponent = m_Player->FindComponentByClass<UPlayer_ElectroGaugeComponent>();
-	if (!m_ElectroComponent)return;
 	//移動速度
 	m_Player->GetCharacterMovement()->MaxWalkSpeed = PlayerParam.RunSpeed;
 	m_Player->GetCharacterMovement()->GravityScale = PlayerParam.GravityScale;
@@ -75,19 +84,6 @@ void UPlayer_MovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!m_Player) return;
-
-	//const FVector Velocity = m_Player->GetCharacterMovement()->Velocity;
-	//const float Speed = Velocity.Size();
-
-	//if (GEngine)
-	//{
-	//	GEngine->AddOnScreenDebugMessage(
-	//		-1,                 // 毎フレーム上書き
-	//		0.f,                // 表示時間（0 = 次フレームまで）
-	//		FColor::Green,
-	//		FString::Printf(TEXT("Speed: %.1f"), Speed)
-	//	);
-	//}
 
 
 	//入力を減らす
@@ -114,7 +110,7 @@ void UPlayer_MovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	//アイドル時以外
 	else
 	{
-		m_Player->GetCharacterMovement()->RotationRate = FRotator(0.f, 1300.f, 0.f);
+		m_Player->GetCharacterMovement()->RotationRate = FRotator(0.f, MovementConstants::MoveRotationRateYaw, 0.f);
 	}
 
 	if (m_EvasiveComponent->GetIsJustEvasive())
@@ -127,16 +123,16 @@ void UPlayer_MovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 //アイドル状態
 void UPlayer_MovementComponent::_updateIdle()
 {
+	if (!m_Player) return;
+
 	//移動しているかどうか
-	bool bMoving = m_Player->GetVelocity().SizeSquared() > 30.f;
+	bool bMoving = m_Player->GetVelocity().SizeSquared() > MovementConstants::IdleVelocitySqThreshold;
 	//地上にいるかどうか
 	bool bIsGround = m_Player->GetCharacterMovement()->IsMovingOnGround();
 
 	//上記がtrueの場合アイドル状態とする
 	m_IsIdle = (!bMoving && bIsGround);
 }
-
-
 
 //ダッシュ
 void UPlayer_MovementComponent::_updateDash(float DeltaTime)
@@ -146,46 +142,33 @@ void UPlayer_MovementComponent::_updateDash(float DeltaTime)
 	FVector CurrentVelocity = m_Player->GetCharacterMovement()->Velocity;
 
 	//入力がなくなったらダッシュ解除
-	if (m_CurrentMoveInput.SizeSquared() < 0.1)
+	if (m_CurrentMoveInput.SizeSquared() < MovementConstants::InputDeadZoneSq)
 	{
 		m_IsDashDecelerating = true;
 
-		m_Player->GetCharacterMovement()->BrakingDecelerationWalking = 500.f;
-		m_Player->GetCharacterMovement()->GroundFriction = 2.f;
+		m_Player->GetCharacterMovement()->BrakingDecelerationWalking = MovementConstants::DashDecelBraking;;
+		m_Player->GetCharacterMovement()->GroundFriction = MovementConstants::DashDecelFriction;
 
-		// 慣性の強さ（InterpSpeed）。
-		float InertiaSpeed = 3.0f;
-
-		FVector NewVelocity = FMath::VInterpTo(CurrentVelocity, FVector::ZeroVector, DeltaTime, InertiaSpeed);
+		FVector NewVelocity = FMath::VInterpTo(CurrentVelocity, FVector::ZeroVector, DeltaTime, MovementConstants::DashInertiaInterpSpeed);
 
 		// 実際に速度を適用する
 		m_Player->GetCharacterMovement()->Velocity = NewVelocity;
 
 		// 十分に速度が落ちたらダッシュ終了
-		if (NewVelocity.SizeSquared() < 900.0f)
+		if (NewVelocity.SizeSquared() < MovementConstants::DashEndVelocitySqThreshold)
 		{
 			EndDash();
 		}
 		return; // 入力がない時はここで処理終了
 	}
-	// もし「減速モード中」に入力が入ったら、ダッシュを再開せず、ダッシュ自体を終わらせる
+	//もし「減速モード中」に入力が入ったら、ダッシュを再開せず、ダッシュ自体を終わらせる
 	if (m_IsDashDecelerating)
 	{
-		EndDash(); // これでRunSpeedに戻り、通常の移動入力処理(TickやInput_Move)に任せる
+		EndDash(); //これでRunSpeedに戻り、通常の移動入力処理
 		return;
 	}
 
-	// ロックオン中はロックオンカメラのYawを使う
-	FRotator DashRotation;
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-		DashRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	else
-	{
-		DashRotation = GetControlRotationFlat();
-	}
+	FRotator DashRotation = GetControlRotationFlat();
 
 	FVector Forward = FRotationMatrix(DashRotation).GetUnitAxis(EAxis::X);
 	FVector Right = FRotationMatrix(DashRotation).GetUnitAxis(EAxis::Y);
@@ -270,20 +253,9 @@ void UPlayer_MovementComponent::Input_MoveForward(const FInputActionValue& Value
 	//入力方向だけ受け取り攻撃中は移動しない
 	if (m_AttackComponent->GetIsAttack())return;
 
-	FRotator MoveRotation;
-
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		// ロックオン中はロックオンカメラのYawのみ使用
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-		MoveRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	else
-	{
-		// 通常時はControllerのYawのみ使用
-		FRotator ControlRotation = GetControlRotationFlat();
-		MoveRotation = ControlRotation;
-	}
+	//通常時はControllerのYawのみ使用
+	FRotator ControlRotation = GetControlRotationFlat();
+	FRotator MoveRotation = ControlRotation;
 	//前後方向取得
 	FVector ForwardFace = FRotationMatrix(MoveRotation).GetUnitAxis(EAxis::X);
 
@@ -323,18 +295,8 @@ void UPlayer_MovementComponent::Input_MoveRight(const FInputActionValue& Value)
 	if (m_AttackComponent->GetIsAttack())return;
 
 
-	FRotator MoveRotation;
-
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-		MoveRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	else
-	{
-		FRotator ControlRot = GetControlRotationFlat();
-		MoveRotation = ControlRot;
-	}
+	FRotator ControlRot = GetControlRotationFlat();
+	FRotator MoveRotation = ControlRot;
 
 	//左右方向取得
 	FVector RightFace = FRotationMatrix(MoveRotation).GetUnitAxis(EAxis::Y);
@@ -387,10 +349,10 @@ void UPlayer_MovementComponent::Input_JumpRelease()
 			//上昇速度を直接カットして書き戻す
 			FVector CurrentVelocity = m_Player->GetCharacterMovement()->Velocity;
 
-			// 上昇力を35%に減衰（好きな値に調整可）
-			CurrentVelocity.Z *= 0.35f;
+			//上昇力を35%に減衰
+			CurrentVelocity.Z *= MovementConstants::JumpShortReleaseMultiplier;
 
-			// 最低保証（これ以上低くはしない）
+			// 最低保証
 			if (CurrentVelocity.Z < PlayerParam.ShortJumpZVelocity)
 			{
 				CurrentVelocity.Z = PlayerParam.ShortJumpZVelocity;
@@ -410,12 +372,12 @@ void UPlayer_MovementComponent::StartJump(float _JumpZVelocity)
 	{
 		FVector Velocity = MoveComp->Velocity;
 
-		// Z速度を完全に上書き（加算ではないため、前の慣性が残らない）
+		//Z速度を完全に上書き
 		Velocity.Z = _JumpZVelocity;
 
 		MoveComp->Velocity = Velocity;
 
-		// 強制的に空中状態へ移行（接地判定を切る）
+		//強制的に空中状態へ移行（接地判定を切る）
 		MoveComp->SetMovementMode(MOVE_Falling);
 	}
 }
@@ -428,16 +390,13 @@ void UPlayer_MovementComponent::EndDash()
 
 	// ダッシュ終了時に通常の移動速度に戻す
 	m_Player->GetCharacterMovement()->MaxWalkSpeed = PlayerParam.RunSpeed;
-	m_Player->GetCharacterMovement()->BrakingDecelerationWalking = 2048.f; // UEデフォルト値付近
-	m_Player->GetCharacterMovement()->GroundFriction = 8.f;               // UEデフォルト値付近
+	m_Player->GetCharacterMovement()->BrakingDecelerationWalking = 2048.f; 
+	m_Player->GetCharacterMovement()->GroundFriction = 8.f;               
 	m_Player->GetCharacterMovement()->AirControl = PlayerParam.AirControl;
 	if (m_DashEffectComp)
 	{
 		m_DashEffectComp->Deactivate();
 	}
-
-
-	m_Player->GetCharacterMovement()->AirControl = PlayerParam.AirControl;
 
 }
 
@@ -453,7 +412,7 @@ void UPlayer_MovementComponent::Input_Dash(const FInputActionValue& Value)
 	}
 
 	//アイドル時はダッシュ禁止
-	if (m_CurrentMoveInput.SizeSquared() < 0.1f)
+	if (m_CurrentMoveInput.SizeSquared() < MovementConstants::InputDeadZoneSq)
 	{
 		return;
 	}
@@ -466,21 +425,8 @@ void UPlayer_MovementComponent::Input_Dash(const FInputActionValue& Value)
 
 	m_Player->OnActionCommitted(EPlayerActionCommit::Move);
 
-	// ロックオン中はロックオンカメラのYawを使う
 	//ダッシュ方向の回転
-	FRotator DashRotation;
-	//ロックオン中のカメラ
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		//カメラの水平成分Yaw
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-		DashRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	//通常のダッシュ方向
-	else
-	{
-		DashRotation = GetControlRotationFlat();
-	}
+	FRotator DashRotation = GetControlRotationFlat();
 
 	//前方向ベクトルと右方向ベクトルの取得
 	FVector Forward = FRotationMatrix(DashRotation).GetUnitAxis(EAxis::X);
@@ -503,7 +449,7 @@ void UPlayer_MovementComponent::Input_Dash(const FInputActionValue& Value)
 	m_Player->GetCharacterMovement()->AirControl = PlayerParam.AirControlDash;
 	//スタートダッシュ
 	m_Player->LaunchCharacter(m_DashDirection * PlayerParam.StartDashSpeed, true, true);
-	
+
 	if (!m_DashEffect || !GetOwner())return;
 
 	//ダッシュエフェクト開始
@@ -511,12 +457,12 @@ void UPlayer_MovementComponent::Input_Dash(const FInputActionValue& Value)
 	{
 		m_DashEffectComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
 			m_DashEffect,
-			m_Player->GetMesh(),         
+			m_Player->GetMesh(),
 			FName(NAME_None),
 			FVector::ZeroVector,
 			FRotator::ZeroRotator,
 			EAttachLocation::SnapToTarget,
-			false                      
+			false
 		);
 	}
 	else
@@ -542,20 +488,9 @@ FRotator UPlayer_MovementComponent::GetControlRotationFlat() const
 bool UPlayer_MovementComponent::GetMoveInputDirection(FVector& Direction) const
 {
 	//入力がなければfalse
-	if (m_CurrentMoveInput.SizeSquared() < 0.1f) return false;
+	if (m_CurrentMoveInput.SizeSquared() < MovementConstants::InputDeadZoneSq) return false;
 
-	FRotator BaseRotation;
-
-	if (m_CameraComponent->GetIsTargetLockedOn() && m_CameraComponent->GetLockOnCamera())
-	{
-		FRotator CameraRotation = m_CameraComponent->GetLockOnCamera()->GetComponentRotation();
-
-		BaseRotation = FRotator(0.f, CameraRotation.Yaw, 0.f);
-	}
-	else
-	{
-		BaseRotation = GetControlRotationFlat();
-	}
+	FRotator BaseRotation = GetControlRotationFlat();
 
 	const FVector Forward = FRotationMatrix(BaseRotation).GetUnitAxis(EAxis::X);
 	const FVector Right = FRotationMatrix(BaseRotation).GetUnitAxis(EAxis::Y);
@@ -569,13 +504,13 @@ bool UPlayer_MovementComponent::GetMoveInputDirection(FVector& Direction) const
 //プレイヤーが動こうとしている方向
 bool UPlayer_MovementComponent::GetDesiredMoveDirection(FVector& OutDirection) const
 {
-	// 入力がある場合は入力方向を最優先
+	//入力がある場合は入力方向を最優先
 	if (GetMoveInputDirection(OutDirection))
 	{
 		return true;
 	}
 
-	// 入力がない場合は現在の向きを基準にする
+	//入力がない場合は現在の向きを基準にする
 	OutDirection = m_Player->GetActorForwardVector();
 	return false;
 }
@@ -594,19 +529,19 @@ void UPlayer_MovementComponent::OnJustEvasive(const AActor* Target)
 
 	m_Player->SetActorRotation(ForwardRotation);
 
-	// 自動回転に負けないよう一時的に制御
+	//自動回転に負けないよう一時的に制御
 	m_Player->bUseControllerRotationYaw = true;
 }
 
 void UPlayer_MovementComponent::OnPlayerLanded()
 {
-	// ジャンプフラグを下ろす
+	//ジャンプフラグを下ろす
 	m_IsJump = false;
 
-	// ジャンプ入力を禁止するフラグを立てる
+	//ジャンプ入力を禁止するフラグを立てる
 	m_IsJumpCooldown = true;
 
-	// 0.1秒後に OnJumpCooldownFinished を呼び出してフラグを解除する
+	//0.1秒後に OnJumpCooldownFinished を呼び出してフラグを解除する
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(

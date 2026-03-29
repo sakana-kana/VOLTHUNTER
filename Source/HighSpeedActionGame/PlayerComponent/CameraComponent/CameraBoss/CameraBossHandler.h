@@ -1,4 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//担当
+//伊藤直樹
+
+//ボスシーンでのカメラハンドラー
 
 #pragma once
 
@@ -36,16 +39,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "BossCamera")
 	float m_BossArmLength=600.f;
 
+	//画角を広げて巨大感を出す
 	UPROPERTY(EditAnywhere, Category = "Boss Camera")
-	float m_BossFOV = 100.0f;        // 画角を広げて巨大感を出す
+	float m_BossFOV = 100.0f;       
 
-
+	//移行する速さ
 	UPROPERTY(EditAnywhere, Category = "Boss Camera")
-	float m_TransitionSpeed = 2.0f;   // 移行する速さ
+	float m_TransitionSpeed = 2.0f;   
 
 private:
-	USpringArmComponent* SpringArm;
-	UCameraComponent* Camera;
+	TWeakObjectPtr<USpringArmComponent> m_SpringArm;
+	TWeakObjectPtr<UCameraComponent> m_Camera;
 
 	bool m_IsActive;
 

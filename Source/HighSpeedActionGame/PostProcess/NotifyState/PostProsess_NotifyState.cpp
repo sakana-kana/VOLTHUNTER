@@ -13,7 +13,7 @@ void UPostProsess_NotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAn
 	{
 		if (UWorld* World = MeshComp->GetWorld())
 		{
-			// サブシステムを取得して有効化 
+			//サブシステムを取得して有効化 
 			if (UPostProsess* PostProsess = World->GetSubsystem<UPostProsess>())
 			{
 				PostProsess->SetPostProsessActive(true);
@@ -30,7 +30,7 @@ void UPostProsess_NotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnim
 	{
 		if (UWorld* World = MeshComp->GetWorld())
 		{
-			// サブシステムを取得して無効化
+			//サブシステムを取得して無効化
 			if (UPostProsess* PostProsess = World->GetSubsystem<UPostProsess>())
 			{
 				PostProsess->SetPostProsessActive(false);

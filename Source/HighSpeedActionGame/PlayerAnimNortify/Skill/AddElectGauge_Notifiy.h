@@ -1,6 +1,8 @@
 //担当
 //伊藤直樹
 
+//ヒット時ゲージを加算するクラス
+
 #pragma once
 
 #include "CoreMinimal.h"
